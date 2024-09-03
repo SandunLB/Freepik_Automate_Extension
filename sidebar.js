@@ -334,115 +334,132 @@ function initializePopup() {
 }
 
 //-------------------------------------------SIZE SELECTOR--------------------------------------------------//
+// popup.js for size selector
+document.addEventListener('DOMContentLoaded', initializeSizeSelector);
 
-  
-// Function to extract sizes from the page
-function extractsizesFromPage() {
-    const sizeElements = document.querySelectorAll('.flex.cursor-pointer.items-center.gap-2.rounded.py-2.pl-1.pr-2\\.5.text-xs.text-neutral-900');
-    return Array.from(sizeElements).map(el => el.textContent.trim());
-}
+function initializeSizeSelector() {
+    const sizeSelector = document.getElementById('size-selector');
+    let isSizeContainerOpen = false;
 
-// Function to update the size selector with real options
-function updatesizeSelector(sizes) {
-    const select = document.getElementById('size-selector');
-    
-    // Remove all options
-    select.innerHTML = '';
+    sizeSelector.addEventListener('mousedown', handleSizeSelectorClick);
+    sizeSelector.addEventListener('change', handleSizeSelection);
+    sizeSelector.addEventListener('change', closeSizeContainer);
 
-    // Add placeholder option
-    const placeholderOption = document.createElement('option');
-    placeholderOption.value = '';
-    placeholderOption.textContent = 'Select a size';
-    placeholderOption.disabled = true;
-    placeholderOption.selected = true;
-    select.appendChild(placeholderOption);
+    updateSizeSelector([]);
 
-    // Add new options based on extracted sizes
-    sizes.forEach(size => {
-        const option = document.createElement('option');
-        option.value = size;
-        option.textContent = size;
-        select.appendChild(option);
-    });
-}
-
-// Function to handle size selection
-function handlesizeSelection(event) {
-    const selectedsize = event.target.value;
-    
-    if (selectedsize) {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.scripting.executeScript({
-                target: { tabId: tabs[0].id },
-                func: clickElementWithText,
-                args: [selectedsize]
-            });
-        });
+    function handleSizeSelectorClick(event) {
+        if (event.button === 0) { // Left mouse button
+            openSizeContainer()
+                .then(() => extractSizesFromPage())
+                .then(updateSizeSelector);
+        }
     }
-}
 
-// Function to click the element with the selected text
-function clickElementWithText(searchText) {
-    const spans = document.querySelectorAll('span');
-    const targetElement = Array.from(spans).find(span => span.textContent.trim() === searchText);
-    if (targetElement) {
-        targetElement.click();
-        console.log(`Clicked the element with text: "${searchText}".`);
-    } else {
-        console.log(`Element with text "${searchText}" not found.`);
+    function handleSizeSelection(event) {
+        const selectedSize = event.target.value;
+        if (selectedSize !== '') {
+            clickElementWithText(selectedSize)
+                .then(success => {
+                    if (success) {
+                        console.log('Size selection successful');
+                        closeSizeContainer();
+                    } else {
+                        console.log('Size selection failed');
+                    }
+                })
+                .catch(console.error);
+        }
     }
-}
 
-// Function to toggle the size button
-function togglesizeButton(action) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            func: (action) => {
+    function openSizeContainer() {
+        return toggleSizeContainer(true);
+    }
+
+    function closeSizeContainer() {
+        return toggleSizeContainer(false);
+    }
+
+    function toggleSizeContainer(shouldOpen) {
+        return new Promise((resolve) => {
+            if (shouldOpen === isSizeContainerOpen) {
+                resolve(true);
+                return;
+            }
+
+            executeScriptInActiveTab(() => {
                 const sizeButton = [...document.querySelectorAll('button')].find(button =>
                     button.querySelector('span.text-xs.font-semibold')?.textContent.trim().toLowerCase() === 'size'
                 );
                 if (sizeButton) {
-                    const isActive = sizeButton.classList.contains('active');
-                    if ((action === 'open' && !isActive) || (action === 'close' && isActive)) {
-                        sizeButton.click();
-                    }
+                    sizeButton.click();
+                    return true;
                 }
-                return action === 'open'; 
-            },
-            args: [action]
-        }, (results) => {
-            if (action === 'open' && results && results[0] && results[0].result) {
-                // If the button was successfully opened, now extract the sizes
-                chrome.scripting.executeScript({
-                    target: { tabId: tabs[0].id },
-                    func: extractsizesFromPage
-                }, (sizeResults) => {
-                    if (sizeResults && sizeResults[0] && sizeResults[0].result) {
-                        updatesizeSelector(sizeResults[0].result);
-                    }
-                });
+                console.log('Size button not found');
+                return false;
+            }).then(result => {
+                if (result) {
+                    isSizeContainerOpen = shouldOpen;
+                    setTimeout(() => resolve(true), 500);
+                } else {
+                    resolve(false);
+                }
+            });
+        });
+    }
+
+    function extractSizesFromPage() {
+        return executeScriptInActiveTab(() => {
+            const sizeElements = document.querySelectorAll('.flex.cursor-pointer.items-center.gap-2.rounded.py-2.pl-1.pr-2\\.5.text-xs.text-neutral-900');
+            return Array.from(sizeElements).map(el => el.textContent.trim());
+        });
+    }
+
+    function updateSizeSelector(sizes) {
+        sizeSelector.innerHTML = '<option value="" disabled selected>Select a size</option>';
+        sizes.forEach(size => {
+            const option = document.createElement('option');
+            option.value = size;
+            option.textContent = size;
+            sizeSelector.appendChild(option);
+        });
+    }
+
+    function clickElementWithText(searchText) {
+        return executeScriptInActiveTab((text) => {
+            const spans = document.querySelectorAll('span');
+            const targetElement = Array.from(spans).find(span => span.textContent.trim() === text);
+            if (targetElement) {
+                targetElement.click();
+                console.log(`Clicked the element with text: "${text}".`);
+                return true;
+            } else {
+                console.log(`Element with text "${text}" not found.`);
+                return false;
             }
+        }, searchText);
+    }
+}
+
+function executeScriptInActiveTab(scriptFunction, ...args) {
+    return new Promise((resolve) => {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            chrome.scripting.executeScript({
+                target: {tabId: tabs[0].id},
+                function: scriptFunction,
+                args: args
+            }, function(results) {
+                if (chrome.runtime.lastError) {
+                    console.error(chrome.runtime.lastError);
+                    resolve(null);
+                } else if (results && results[0]) {
+                    resolve(results[0].result);
+                } else {
+                    resolve(null);
+                }
+            });
         });
     });
 }
-
-// Initialize the popup
-document.addEventListener('DOMContentLoaded', () => {
-    const sizeSelector = document.getElementById('size-selector');
-    
-    // Add event listeners
-    sizeSelector.addEventListener('change', handlesizeSelection);
-    sizeSelector.addEventListener('focus', () => togglesizeButton('open'));
-    sizeSelector.addEventListener('blur', () => {
-        setTimeout(() => togglesizeButton('close'), 200);
-    });
-
-    // Initial setup
-    updatesizeSelector([]);
-});
-
-
 
 
 //-------------------------------------------STYLE SELECTOR--------------------------------------------------//
