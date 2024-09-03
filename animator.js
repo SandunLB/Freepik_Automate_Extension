@@ -1,3 +1,40 @@
+// File Input Field
+
+document.getElementById('fileInput').addEventListener('change', function() {
+    const fileLabel = document.querySelector('.file-label');
+    const fileNameElement = document.getElementById('fileName');
+    
+    if (this.files.length > 0) {
+        const fileName = this.files[0].name;
+        fileLabel.textContent = 'Change TXT Files';
+        fileNameElement.textContent = fileName;
+    } else {
+        resetFileInput();
+    }
+});
+
+
+document.querySelector('.file-label').addEventListener('click', function() {
+    setTimeout(() => {
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput.files.length === 0) {
+            resetFileInput();
+        }
+    }, 100); 
+});
+
+function resetFileInput() {
+    const fileLabel = document.querySelector('.file-label');
+    const fileNameElement = document.getElementById('fileName');
+    const fileInput = document.getElementById('fileInput');
+    
+    fileLabel.textContent = 'Select TXT Files';
+    fileNameElement.textContent = '';
+    fileInput.value = ''; 
+}
+
+
+
 document.addEventListener('DOMContentLoaded', () => {
     const createButton = document.getElementById('create-button');
     const particlesContainer = createButton.querySelector('.particles');

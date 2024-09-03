@@ -1,43 +1,95 @@
 //-------------------------------------------MAIN PROMPT ACTIONS--------------------------------------------------//
 
-//---------------------------TEXT AREA--------------------------------//
-document.querySelector('.prompt-textarea').addEventListener('input', (event) => {
-    console.log('Text entered in the prompt textarea:', event.target.value);
+//---------------------------TEXT FILE INPUT + TEXT AREA--------------------------------//
+let lines = [];
+let currentLine = -1;
 
-    // Send a message to the content script to handle the textarea input functionality
+const fileInput = document.getElementById('fileInput');
+const startButton = document.getElementById('startButton');
+const extensionTextarea = document.querySelector('.prompt-textarea');
+
+fileInput.addEventListener('click', () => {
+    // Reset the file input value when clicked
+    fileInput.value = '';
+});
+
+fileInput.addEventListener('change', handleFileSelect);
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    
+    if (file) {
+        // Reset everything
+        lines = [];
+        currentLine = -1;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            lines = e.target.result.split('\n').filter(line => line.trim() !== '');
+            console.log(`File loaded with ${lines.length} lines.`);
+        };
+        reader.readAsText(file);
+    }
+}
+
+extensionTextarea.addEventListener('input', (event) => {
+    console.log('Text entered in the prompt textarea:', event.target.value);
+    updateMainPageTextarea(event.target.value);
+});
+
+function updateMainPageTextarea(text) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         chrome.scripting.executeScript({
             target: { tabId: tabs[0].id },
             func: handleTextareaInput,
-            args: [event.target.value]  // Pass the current value as an argument
+            args: [text]
         });
     });
-});
-// Function to handle the textarea input
-function handleTextareaInput(currentValue) {
-    // Step 1: Select the textarea
-    const textarea = document.querySelector('textarea');
+}
 
-    // Step 2: Check if the textarea is found
+function handleTextareaInput(currentValue) {
+    const textarea = document.querySelector('textarea');
     if (textarea) {
         console.log('Textarea found:', textarea);
-
-        // Step 3: Log the current value
         console.log('Current value:', textarea.value);
-
-        // Step 4: Change the value to the provided one
-        textarea.value = currentValue + "";
-
-        // Step 5: Trigger an event to simulate typing
+        textarea.value = currentValue;
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
-
         console.log('Textarea content updated and input event dispatched');
     } else {
         console.error('Textarea not found');
     }
 }
 
+startButton.addEventListener('click', replaceText);
 
+function replaceText() {
+    if (lines.length > 0) {
+        currentLine++;
+        if (currentLine < lines.length) {
+            const newText = lines[currentLine].trim();
+            
+            if (extensionTextarea) {
+                extensionTextarea.value = newText;
+                extensionTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                // Update the main webpage's textarea
+                updateMainPageTextarea(newText);
+                
+                console.log(`Displayed line ${currentLine + 1} of ${lines.length}`);
+            }
+        } else {
+            console.log('End of file reached. Select a file again to start over.');
+            // Reset to allow starting over
+            currentLine = -1;
+            lines = [];
+            fileInput.value = ''; // Clear the file input
+            extensionTextarea.value = ''; // Clear the textarea
+            updateMainPageTextarea(''); // Clear the main webpage's textarea
+        }
+    } else {
+        console.log('No file loaded or all lines displayed. Please select a file.');
+    }
+}
 
 
 
@@ -145,92 +197,250 @@ function handleAddImageReferenceClick() {
 
 
 
-//-------------------------------------------AI MODE SELECTOR--------------------------------------------------//
+//------------------------------------------AI MODE SELECTOR------------------------------------------------//
 
+// popup.js
+document.addEventListener('DOMContentLoaded', initializePopup);
 
-document.getElementById('buttonSelector').addEventListener('change', (event) => {
-    const selectedButtonIndex = event.target.value;
-    
-    // Send a message to the content script to click the main button first, then the sub-button
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            func: handleButtonClick,
-            args: [parseInt(selectedButtonIndex)]
-        });
-    });
-});
+function initializePopup() {
+    const modeSelector = document.getElementById('mode-selector');
+    let isAIContainerOpen = false;
 
-// Function to handle clicking the main button and then the selected sub-button
-function handleButtonClick(index) {
-    // Step 1: Click the main button to reveal the options
-    const mainButton = [...document.querySelectorAll('button')].find(button =>
-        button.querySelector('span.text-xs.font-semibold')?.textContent === 'Mode'
-    );
+    modeSelector.addEventListener('mousedown', handleModeSelectorClick);
+    modeSelector.addEventListener('change', handleModeSelection);
+    modeSelector.addEventListener('change', closeAIModeContainer);
 
-    if (mainButton) {
-        mainButton.click();
-        console.log('Main button clicked');
-  
-        // Wait for the options to appear before trying to click a sub-button
-        setTimeout(() => {
-            // Step 2: Click the selected sub-button
-            const buttons = document.querySelectorAll('div.scrollbar-thin-y > button');
-            if (buttons[index]) {
-                buttons[index].click();
-                console.log(`Clicked the button at index ${index}`);
-            } else {
-                console.error(`Button at index ${index} not found`);
+    function handleModeSelectorClick(event) {
+        if (event.button === 0) { // Left mouse button
+            openAIModeContainer()
+                .then(() => extractModesFromPage())
+                .then(updateModeSelector);
+        }
+    }
+
+    function handleModeSelection(event) {
+        const selectedIndex = event.target.value;
+        if (selectedIndex !== '') {
+            selectMode(parseInt(selectedIndex))
+                .then(success => {
+                    if (success) {
+                        console.log('Mode selection successful');
+                        closeAIModeContainer();
+                    } else {
+                        console.log('Mode selection failed');
+                    }
+                })
+                .catch(console.error);
+        }
+    }
+
+    function openAIModeContainer() {
+        return toggleAIModeContainer(true);
+    }
+
+    function closeAIModeContainer() {
+        return toggleAIModeContainer(false);
+    }
+
+    function toggleAIModeContainer(shouldOpen) {
+        return new Promise((resolve) => {
+            if (shouldOpen === isAIContainerOpen) {
+                resolve(true);
+                return;
             }
-        }, 1); 
-    } else {
-        console.error('Main button not found!');
+
+            executeScriptInActiveTab(() => {
+                const button = document.querySelector('button.relative.flex.h-8.w-auto.items-center.justify-center.text-neutral-900 span.font-semibold');
+                if (button) {
+                    button.click();
+                    return true;
+                }
+                console.log('Button not found');
+                return false;
+            }).then(result => {
+                if (result) {
+                    isAIContainerOpen = shouldOpen;
+                    setTimeout(() => resolve(true), 500);
+                } else {
+                    resolve(false);
+                }
+            });
+        });
+    }
+
+    function extractModesFromPage() {
+        return executeScriptInActiveTab(() => {
+            const container = document.querySelector('div[class*="flex max-h-[calc(100vh-250px)]"]');
+            if (!container) return [];
+
+            const buttons = container.querySelectorAll('button');
+            return Array.from(buttons).map((btn, index) => ({
+                index,
+                title: (btn.querySelector('div[class*="font-semibold"]') || btn.querySelector('span[class*="font-semibold"]'))?.textContent.trim() || '',
+                description: btn.querySelector('span[class*="text-neutral-700"]')?.textContent.trim() || '',
+                isSelected: btn.classList.contains('bg-neutral-50') || btn.classList.contains('dark:bg-neutral-800/50')
+            }));
+        });
+    }
+
+    function updateModeSelector(modes) {
+        modeSelector.innerHTML = '<option value="" disabled selected>Select a mode</option>';
+        modes.forEach(mode => {
+            const option = document.createElement('option');
+            option.value = mode.index;
+            option.textContent = mode.title;
+            option.title = mode.description;
+            option.selected = mode.isSelected;
+            modeSelector.appendChild(option);
+        });
+    }
+
+    function selectMode(index) {
+        return executeScriptInActiveTab((idx) => {
+            const container = document.querySelector('div[class*="flex max-h-[calc(100vh-250px)]"]');
+            if (!container) return false;
+
+            const buttons = container.querySelectorAll('button');
+            if (buttons[idx]) {
+                buttons[idx].click();
+                console.log(`Clicked mode at index: ${idx}`);
+                return true;
+            }
+            console.log(`Failed to click mode at index: ${idx}`);
+            return false;
+        }, index);
+    }
+
+    function executeScriptInActiveTab(scriptFunction, ...args) {
+        return new Promise((resolve) => {
+            chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+                chrome.scripting.executeScript({
+                    target: {tabId: tabs[0].id},
+                    function: scriptFunction,
+                    args: args
+                }, function(results) {
+                    if (chrome.runtime.lastError) {
+                        console.error(chrome.runtime.lastError);
+                        resolve(null);
+                    } else if (results && results[0]) {
+                        resolve(results[0].result);
+                    } else {
+                        resolve(null);
+                    }
+                });
+            });
+        });
     }
 }
-
 
 //-------------------------------------------SIZE SELECTOR--------------------------------------------------//
 
   
-  document.getElementById('sizeSelector').addEventListener('change', () => {
-    const selectedSizeIndex = document.getElementById('sizeSelector').value;
-  
-    // Send a message to the content script to click the main size button first, then the sub-button
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      chrome.scripting.executeScript({
-        target: { tabId: tabs[0].id },
-        func: handleSizeClick,
-        args: [parseInt(selectedSizeIndex)]
-      });
+// Function to extract sizes from the page
+function extractsizesFromPage() {
+    const sizeElements = document.querySelectorAll('.flex.cursor-pointer.items-center.gap-2.rounded.py-2.pl-1.pr-2\\.5.text-xs.text-neutral-900');
+    return Array.from(sizeElements).map(el => el.textContent.trim());
+}
+
+// Function to update the size selector with real options
+function updatesizeSelector(sizes) {
+    const select = document.getElementById('size-selector');
+    
+    // Remove all options
+    select.innerHTML = '';
+
+    // Add placeholder option
+    const placeholderOption = document.createElement('option');
+    placeholderOption.value = '';
+    placeholderOption.textContent = 'Select a size';
+    placeholderOption.disabled = true;
+    placeholderOption.selected = true;
+    select.appendChild(placeholderOption);
+
+    // Add new options based on extracted sizes
+    sizes.forEach(size => {
+        const option = document.createElement('option');
+        option.value = size;
+        option.textContent = size;
+        select.appendChild(option);
     });
-  });
-  
-  // Function to handle clicking the main size button and then the selected size option
-  function handleSizeClick(index) {
-    // Step 1: Click the main size button to reveal the options
-    const mainSizeButton = [...document.querySelectorAll('button')].find(button =>
-      button.querySelector('span.text-xs.font-semibold')?.textContent === 'Size'
-    );
-  
-    if (mainSizeButton) {
-      mainSizeButton.click();
-      console.log('Main size button clicked');
-  
-      // Wait for the options to appear before trying to click a size option
-      setTimeout(() => {
-        // Step 2: Click the selected size option
-        const sizeOptions = document.querySelectorAll('div.scrollbar-thin-y > span');
-        if (sizeOptions[index]) {
-          sizeOptions[index].click();
-          console.log(`Clicked the size option at index ${index}`);
-        } else {
-          console.error(`Size option at index ${index} not found`);
-        }
-      }, 1); // Adjust timeout as needed to ensure options are visible
-    } else {
-      console.error('Main size button not found!');
+}
+
+// Function to handle size selection
+function handlesizeSelection(event) {
+    const selectedsize = event.target.value;
+    
+    if (selectedsize) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            chrome.scripting.executeScript({
+                target: { tabId: tabs[0].id },
+                func: clickElementWithText,
+                args: [selectedsize]
+            });
+        });
     }
-  }
+}
+
+// Function to click the element with the selected text
+function clickElementWithText(searchText) {
+    const spans = document.querySelectorAll('span');
+    const targetElement = Array.from(spans).find(span => span.textContent.trim() === searchText);
+    if (targetElement) {
+        targetElement.click();
+        console.log(`Clicked the element with text: "${searchText}".`);
+    } else {
+        console.log(`Element with text "${searchText}" not found.`);
+    }
+}
+
+// Function to toggle the size button
+function togglesizeButton(action) {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            func: (action) => {
+                const sizeButton = [...document.querySelectorAll('button')].find(button =>
+                    button.querySelector('span.text-xs.font-semibold')?.textContent.trim().toLowerCase() === 'size'
+                );
+                if (sizeButton) {
+                    const isActive = sizeButton.classList.contains('active');
+                    if ((action === 'open' && !isActive) || (action === 'close' && isActive)) {
+                        sizeButton.click();
+                    }
+                }
+                return action === 'open'; 
+            },
+            args: [action]
+        }, (results) => {
+            if (action === 'open' && results && results[0] && results[0].result) {
+                // If the button was successfully opened, now extract the sizes
+                chrome.scripting.executeScript({
+                    target: { tabId: tabs[0].id },
+                    func: extractsizesFromPage
+                }, (sizeResults) => {
+                    if (sizeResults && sizeResults[0] && sizeResults[0].result) {
+                        updatesizeSelector(sizeResults[0].result);
+                    }
+                });
+            }
+        });
+    });
+}
+
+// Initialize the popup
+document.addEventListener('DOMContentLoaded', () => {
+    const sizeSelector = document.getElementById('size-selector');
+    
+    // Add event listeners
+    sizeSelector.addEventListener('change', handlesizeSelection);
+    sizeSelector.addEventListener('focus', () => togglesizeButton('open'));
+    sizeSelector.addEventListener('blur', () => {
+        setTimeout(() => togglesizeButton('close'), 200);
+    });
+
+    // Initial setup
+    updatesizeSelector([]);
+});
 
 
 
@@ -847,7 +1057,29 @@ document.addEventListener('DOMContentLoaded', function() {
 //-------------------------------------------CREATE+DOWNLOAD BUTTON--------------------------------------------------//
 
 // Create Button Logic
-document.addEventListener('DOMContentLoaded', () => {
+const clickCreateButton = () => {
+    const createButton = document.querySelector('button[data-cy="create"]');
+    if (createButton) {
+      const rect = createButton.getBoundingClientRect();
+      const mouseMoveEvent = new MouseEvent('mousemove', {
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+        bubbles: true
+      });
+      const mouseClickEvent = new MouseEvent('click', {
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+        bubbles: true
+      });
+      document.dispatchEvent(mouseMoveEvent);
+      createButton.dispatchEvent(mouseClickEvent);
+      console.log('Create Button clicked on the webpage');
+    } else {
+      console.error('Create Button not found on the webpage');
+    }
+  };
+  
+  document.addEventListener('DOMContentLoaded', () => {
     const createButton = document.getElementById('create-button');
     const downloadButton = document.getElementById('download-button');
   
@@ -858,25 +1090,16 @@ document.addEventListener('DOMContentLoaded', () => {
           target: { tabId: tabs[0].id },
           func: clickCreateButton
         });
-      });
   
-      // Set a 500ms timer before clicking the download button
-      setTimeout(() => {
-        console.log('Triggering download button after 500ms');
-        downloadButton.click();
-      }, 1000);
+        // Set a 1000ms timer before clicking the download button
+        setTimeout(() => {
+          console.log('Triggering download button after 1000ms');
+          downloadButton.click();
+        }, 1200);
+      });
     });
   });
   
-  function clickCreateButton() {
-    const createButton = document.querySelector('button[data-cy="create"]');
-    if (createButton) {
-      createButton.click();
-      console.log('Create Button clicked on the webpage');
-    } else {
-      console.error('Create Button not found on the webpage');
-    }
-  }
   
   // Download Button Logic
   document.addEventListener('DOMContentLoaded', function() {

@@ -8,7 +8,29 @@
 </head>
 <body>
     <div class="sidebar-wrapper">
-        <div class="form-section">
+        <!-- Text File Input Section -->
+        <div class="file-input-container">
+            <label for="fileInput" class="file-label">Select TXT Files</label>
+            <input type="file" id="fileInput" accept=".txt" class="file-input">
+            <span id="fileName" class="file-name"></span>
+        </div>
+          
+          
+          
+        
+        <div class="automate-prompt-toggle">
+            Automate
+            <label class="toggle-switch">
+                <input type="checkbox" id="automatePromptToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        
+        
+        
+         <!-- Main Prompt Section -->
+         <div class="form-section">
             <div class="form-container">
                 <textarea class="prompt-textarea" placeholder="Describe your image" rows="3"></textarea>
                 <div class="button-row">
@@ -22,8 +44,11 @@
                     </div>
                     <button class="image-ref-button">🖼️</button>
                 </div>
+                <!-- Add the Start Replacing Text button here -->
+                <button id="startButton" class="start-button">Start Replacing Text</button>
             </div>
         </div>
+        
         
         <!-- Negative Prompt Section -->
         <div class="negative-form-section" style="display: none;">
@@ -33,16 +58,10 @@
         </div>
 
         <div class="select-section">
-            <h3>AI Mode</h3>
+            <h3>Mode</h3>
             <div class="select-container">
-                <select id="buttonSelector">
-                    <option value="" disabled selected>Select AI Mode</option>
-                    <option value="0">Flux Fast</option>
-                    <option value="1">Flux</option>
-                    <option value="2">Flux Realism</option>
-                    <option value="3">Classic Fast</option>
-                    <option value="4">Classic</option>
-                    <option value="5">Mystic</option>
+                <select id="mode-selector">
+                    <option value="" disabled selected>Select a mode</option>
                 </select>
             </div>
         </div>
@@ -50,18 +69,8 @@
         <div class="select-section">
             <h3>Size</h3>
             <div class="select-container">
-                <select id="sizeSelector">
-                    <option value="" disabled selected>Select Size</option>
-                    <option value="0">1:1 Square</option>
-                    <option value="1">1:2 Vertical</option>
-                    <option value="2">2:1 Horizontal</option>
-                    <option value="3">2:3 Portrait</option>
-                    <option value="4">3:4 Traditional</option>
-                    <option value="5">4:5 Social Post</option>
-                    <option value="6">9:16 Social Story</option>
-                    <option value="7">3:2 Standard</option>
-                    <option value="8">4:3 Classic</option>
-                    <option value="9">16:9 Widescreen</option>
+                <select id="size-selector">
+                    <option value="" disabled selected>Select a size</option>
                 </select>
             </div>
         </div>
@@ -152,5 +161,6 @@
 
     <script src="sidebar.js"></script>
     <script src="animator.js"></script>
+    <script src="automator.js"></script>
 </body>
 </html>

@@ -33,7 +33,7 @@
         observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
 
         // Set up observer for AI-prompt toggle button
-        const targetButton = document.querySelector('button[data-v-7960d06d].relative.h-4.w-8');
+        const targetButton = document.querySelector('button.relative.h-4.w-8.rounded-full.bg-neutral-300');
         if (targetButton) {
             const aiPromptObserver = new MutationObserver((mutationsList) => {
                 mutationsList.forEach((mutation) => {

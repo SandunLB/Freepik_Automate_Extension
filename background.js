@@ -1,7 +1,5 @@
 chrome.action.onClicked.addListener((tab) => {
-  chrome.tabs.reload(tab.id, () => {
-      chrome.sidePanel.open({ tabId: tab.id });
-  });
+  chrome.sidePanel.open({ tabId: tab.id });
 });
 
 // Reload Page Everytime Extention loads, for further developments
