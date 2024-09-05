@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         particlesContainer.innerHTML = '';
 
         // Create new particles
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 120; i++) {
             const particle = document.createElement('div');
             particle.classList.add('particle');
             
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             particle.style.setProperty('--ty', `${ty}px`);
             particle.style.left = '50%';
             particle.style.top = '50%';
-            particle.style.animationDelay = `${Math.random() * 300}ms`;
+            particle.style.animationDelay = `${Math.random() * 500}ms`;
 
             particlesContainer.appendChild(particle);
         }
@@ -110,3 +110,17 @@ document.addEventListener('DOMContentLoaded', () => {
         progressBar.style.width = '0%';
     });
 });
+
+
+
+const collapsible = document.querySelector('.collapsible');
+    const content = document.querySelector('.content');
+
+    collapsible.addEventListener('click', function () {
+        this.classList.toggle('active');
+        if (content.style.display === 'block') {
+            content.style.display = 'none';
+        } else {
+            content.style.display = 'block';
+        }
+    });

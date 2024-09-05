@@ -12,18 +12,18 @@
                     const negativeTextarea = document.querySelector('textarea[placeholder="Describe things to avoid on the image"]');
 
                     if (excludeButton) {
-                        console.log('Exclude button found! Updating sidebar...');
+                        
                         chrome.runtime.sendMessage({ action: 'showExcludeButton' });
                     } else {
-                        console.log('Exclude button not found. Hiding sidebar...');
+                        
                         chrome.runtime.sendMessage({ action: 'hideExcludeButton' });
                     }
 
                     if (negativeTextarea) {
-                        console.log('Negative prompt textarea found! Updating sidebar...');
+                        
                         chrome.runtime.sendMessage({ action: 'showNegativePrompt' });
                     } else {
-                        console.log('Negative prompt textarea not found. Hiding in sidebar...');
+                        
                         chrome.runtime.sendMessage({ action: 'hideNegativePrompt' });
                     }
                 }

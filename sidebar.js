@@ -270,18 +270,26 @@ function initializePopup() {
 
     function extractModesFromPage() {
         return executeScriptInActiveTab(() => {
-            const container = document.querySelector('div[class*="flex max-h-[calc(100vh-250px)]"]');
+            const container = document.querySelector('div[class*="flex max-h-[calc(100vh-310px)]"]');
             if (!container) return [];
-
+    
             const buttons = container.querySelectorAll('button');
             return Array.from(buttons).map((btn, index) => ({
                 index,
-                title: (btn.querySelector('div[class*="font-semibold"]') || btn.querySelector('span[class*="font-semibold"]'))?.textContent.trim() || '',
+                // Fetching title from either div or span with the 'font-semibold' class
+                title: (btn.querySelector('div[class*="font-semibold"]') || 
+                        btn.querySelector('span[class*="font-semibold"]'))?.textContent.trim() || '',
+    
+                // Fetching description
                 description: btn.querySelector('span[class*="text-neutral-700"]')?.textContent.trim() || '',
-                isSelected: btn.classList.contains('bg-neutral-50') || btn.classList.contains('dark:bg-neutral-800/50')
+    
+                // Checking if the button is selected
+                isSelected: btn.classList.contains('bg-neutral-50') || 
+                            btn.classList.contains('dark:bg-neutral-800/50')
             }));
         });
     }
+    
 
     function updateModeSelector(modes) {
         modeSelector.innerHTML = '<option value="" disabled selected>Select a mode</option>';
@@ -297,7 +305,7 @@ function initializePopup() {
 
     function selectMode(index) {
         return executeScriptInActiveTab((idx) => {
-            const container = document.querySelector('div[class*="flex max-h-[calc(100vh-250px)]"]');
+            const container = document.querySelector('div[class*="flex max-h-[calc(100vh-310px)]"]');
             if (!container) return false;
 
             const buttons = container.querySelectorAll('button');
@@ -1006,8 +1014,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // CREATE BUTTON + DOWNLOAD BUTTON INDIVIDUAL FUNCTIONALITY
 
-/*//-------------------------------------------CREATE BUTTON--------------------------------------------------//
-
+//-------------------------------------------CREATE BUTTON--------------------------------------------------//
+/*
 document.addEventListener('DOMContentLoaded', () => {
     const createButton = document.getElementById('create-button');
     
@@ -1026,13 +1034,24 @@ document.addEventListener('DOMContentLoaded', () => {
 function clickCreateButton() {
     const createButton = document.querySelector('button[data-cy="create"]');
     if (createButton) {
-        createButton.click();
+        const rect = createButton.getBoundingClientRect();
+        const mouseMoveEvent = new MouseEvent('mousemove', {
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2,
+            bubbles: true
+        });
+        const mouseClickEvent = new MouseEvent('click', {
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2,
+            bubbles: true
+        });
+        document.dispatchEvent(mouseMoveEvent);
+        createButton.dispatchEvent(mouseClickEvent);
         console.log('Create Button clicked on the webpage');
     } else {
         console.error('Create Button not found on the webpage');
     }
 }
-
 
 
 //-------------------------------------------DOWNLOAD BUTTON--------------------------------------------------//
@@ -1068,8 +1087,8 @@ document.addEventListener('DOMContentLoaded', function() {
             currentCountSpan.innerText = request.count;
         }
     });
-  }); */
-
+  }); 
+*/
 
 //-------------------------------------------CREATE+DOWNLOAD BUTTON--------------------------------------------------//
 
@@ -1157,7 +1176,7 @@ const clickCreateButton = () => {
 
 
 
-  // Wait until the DOM is fully loaded
+//-------------------------------------------LOAD MORE--------------------------------------------//
 document.addEventListener('DOMContentLoaded', () => {
     const createButton = document.getElementById('create-button2');
     

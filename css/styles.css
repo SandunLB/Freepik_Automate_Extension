@@ -381,7 +381,7 @@ select:focus {
 
 /* Progress animation styles */
 #create-button.progress {
-  background-color: #2196F3;
+  background-color:var(--accent-color);
   transition: width 0.3s ease-in-out;
 }
 
@@ -522,6 +522,7 @@ select:focus {
   cursor: pointer; 
   font-weight: 700;
   text-align: center; 
+  margin-bottom: 10px;
 }
 
 .file-label:hover {
@@ -536,7 +537,8 @@ select:focus {
   display: block; 
   margin-top: 1px; 
   font-size: 16px;
-  color: black; 
+  color: black;
+  
 }
 
 
@@ -554,7 +556,67 @@ select:focus {
   background-color: #0056b3;
 }
 
+#automateButton {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
 
+#automateButton.start {
+  display: inline-block; 
+  border-radius: 50px; 
+  background-color: #6ceb2f; 
+  width: 100%;
+  padding: 10px 0;
+  font-size: 0.875rem;
+  color: black; 
+  border: none; 
+  cursor: pointer; 
+  font-weight: 700;
+  text-align: center; 
+  margin-bottom: 10px;
+}
+
+#automateButton.stop {
+  display: inline-block; 
+  border-radius: 50px; 
+  background-color: #f13434d2; 
+  width: 100%;
+  padding: 10px 0;
+  font-size: 0.875rem;
+  color: black; 
+  border: none; 
+  cursor: pointer; 
+  font-weight: 700;
+  text-align: center; 
+  margin-bottom: 10px;
+}
+.collapsible {
+  background-color: #f1f1f1;
+  color: #444;
+  cursor: pointer;
+  padding: 10px;
+  width: 100%;
+  border: none;
+  text-align: center;
+  outline: none;
+  font-size: 12px;
+  margin-bottom: 1px;
+}
+
+.collapsible.active, .collapsible:hover {
+  background-color: #ccc;
+}
+
+.content {
+  display: none;
+  overflow: hidden;
+  background-color: #c58ef150;
+  padding: 15px;
+  border-radius: 25px;
+  
+}
 
 
 

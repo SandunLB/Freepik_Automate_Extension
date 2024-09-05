@@ -1,78 +1,218 @@
-// Function to click a button
-function clickButton(buttonSelector) {
-    const button = document.querySelector(buttonSelector);
-    if (button) {
-        button.click();
-    } else {
-        console.error(`Button ${buttonSelector} not found`);
-    }
-}
+// Configuration
+const config = {
+    startButtonSelector: '#startButton',
+    createButtonSelector: '#create-button',
+    fileInputSelector: '#fileInput',
+    automateButtonId: 'automateButton',
+    promptDisplayId: 'promptDisplay',
+    animationTimeout: 8000,
+    iterationDelay: 100,
+    uiUpdateDelay: 1000
+};
 
-// Function to check if file input exists
-function fileInputExists() {
-    return !!document.querySelector('#fileInput');
-}
+// State
+let state = {
+    isRunning: false,
+    currentPrompt: 0,
+    totalPrompts: 0,
+    startTime: null,
+    pausedTime: null
+};
 
-// Function to wait for button animation to complete
-function waitForButtonAnimation() {
-    return new Promise((resolve) => {
-        const createButton = document.getElementById('create-button');
-        const buttonText = createButton.querySelector('.button-text');
+// DOM Elements
+const elements = {
+    automateButton: null,
+    promptDisplay: null,
+    fileInput: null
+};
 
-        // Set up a MutationObserver to watch for changes in the button text
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'characterData' && buttonText.textContent === 'Create') {
-                    observer.disconnect();
-                    resolve();
-                }
-            });
+// Utility Functions
+const utils = {
+    clickButton: (selector) => {
+        const button = document.querySelector(selector);
+        if (button) {
+            button.click();
+        } else {
+            throw new Error(`Button ${selector} not found`);
+        }
+    },
+    fileInputExists: () => !!document.querySelector(config.fileInputSelector),
+    createDisplayElement: () => {
+        const displayElement = document.createElement('div');
+        displayElement.id = config.promptDisplayId;
+        Object.assign(displayElement.style, {
+            position: 'fixed',
+            top: '10px',
+            right: '10px',
+            padding: '10px',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            color: 'white',
+            borderRadius: '5px',
+            zIndex: '9999',
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '14px'
         });
+        document.body.appendChild(displayElement);
+        return displayElement;
+    },
+    formatTime: (ms) => {
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        return `${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+    }
+};
 
-        // Start observing the button text
-        observer.observe(buttonText, { characterData: true, subtree: true });
+// Core Functions
+const core = {
+    waitForButtonAnimation: () => {
+        return new Promise((resolve) => {
+            const createButton = document.querySelector(config.createButtonSelector);
+            const buttonText = createButton.querySelector('.button-text');
 
-        // Fallback: resolve after 30 seconds in case the animation doesn't complete
-        setTimeout(() => {
-            observer.disconnect();
-            resolve();
-        }, 6000);
-    });
-}
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'characterData' && buttonText.textContent === 'Create') {
+                        observer.disconnect();
+                        resolve();
+                    }
+                });
+            });
 
-// Main automation function
-async function runAutomation() {
-    if (!fileInputExists()) {
-        console.log("Automation stopped: File input removed");
-        document.getElementById('automatePromptToggle').checked = false;
-        return;
+            observer.observe(buttonText, { characterData: true, subtree: true });
+
+            setTimeout(() => {
+                observer.disconnect();
+                resolve();
+            }, config.animationTimeout);
+        });
+    },
+    readFileAndCountPrompts: () => {
+        return new Promise((resolve, reject) => {
+            if (!elements.fileInput || !elements.fileInput.files[0]) {
+                reject(new Error('No file selected'));
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n').filter(line => line.trim() !== '');
+                state.totalPrompts = lines.length;
+                ui.updateDisplay();
+                resolve(state.totalPrompts);
+            };
+            reader.onerror = reject;
+            reader.readAsText(elements.fileInput.files[0]);
+        });
+    },
+    runAutomation: async () => {
+        if (!state.isRunning) return;
+
+        if (!utils.fileInputExists()) {
+            console.log("Automation stopped: File input removed");
+            automation.stop();
+            return;
+        }
+
+        if (state.currentPrompt >= state.totalPrompts) {
+            console.log("Automation completed: All prompts processed");
+            automation.stop();
+            return;
+        }
+
+        state.currentPrompt++;
+        ui.updateDisplay();
+
+        try {
+            utils.clickButton(config.startButtonSelector);
+            await new Promise(resolve => setTimeout(resolve, config.uiUpdateDelay));
+            utils.clickButton(config.createButtonSelector);
+            await core.waitForButtonAnimation();
+        } catch (error) {
+            console.error("Error during automation:", error);
+            automation.stop();
+            return;
+        }
+
+        setTimeout(core.runAutomation, config.iterationDelay);
+    }
+};
+
+// UI Functions
+const ui = {
+    updateDisplay: () => {
+        if (elements.promptDisplay) {
+            const elapsedTime = state.startTime ? (state.pausedTime || Date.now()) - state.startTime : 0;
+            elements.promptDisplay.innerHTML = `
+                Current Prompt: ${state.currentPrompt} | Total Prompts: ${state.totalPrompts}<br>
+                Elapsed Time: ${utils.formatTime(elapsedTime)}
+            `;
+        }
+    },
+    updateButtonState: () => {
+        if (elements.automateButton) {
+            elements.automateButton.textContent = state.isRunning ? 'Stop' : 'Start';
+            elements.automateButton.classList.toggle('stop', state.isRunning);
+            elements.automateButton.classList.toggle('start', !state.isRunning);
+        }
+    }
+};
+
+// Automation Control
+const automation = {
+    start: async () => {
+        if (!state.isRunning) {
+            state.isRunning = true;
+            state.currentPrompt = 0;
+            state.startTime = Date.now() - (state.pausedTime || 0);
+            state.pausedTime = null;
+            try {
+                await core.readFileAndCountPrompts();
+                console.log("Automation started");
+                ui.updateButtonState();
+                core.runAutomation();
+            } catch (error) {
+                console.error("Failed to start automation:", error);
+                automation.stop();
+            }
+        }
+    },
+    stop: () => {
+        state.isRunning = false;
+        state.pausedTime = Date.now();
+        console.log("Automation stopped");
+        ui.updateButtonState();
+    },
+    toggle: () => {
+        if (state.isRunning) {
+            automation.stop();
+        } else {
+            automation.start();
+        }
+    }
+};
+
+// Initialization
+function init() {
+    elements.automateButton = document.getElementById(config.automateButtonId);
+    elements.promptDisplay = document.getElementById(config.promptDisplayId) || utils.createDisplayElement();
+    elements.fileInput = document.querySelector(config.fileInputSelector);
+
+    if (elements.automateButton) {
+        elements.automateButton.addEventListener('click', automation.toggle);
     }
 
-    // Click "Start Replacing Text" button
-    clickButton('#startButton');
+    ui.updateButtonState();
+    ui.updateDisplay();
 
-    // Wait for a short time to ensure UI updates
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Click "Create" button
-    clickButton('#create-button');
-
-    // Wait for the button animation to complete
-    await waitForButtonAnimation();
-
-    // Extra 500ms wait after animation completes
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Schedule next iteration
-    setTimeout(runAutomation, 100);
+    // Start updating the display every second
+    setInterval(ui.updateDisplay, 1000);
 }
 
-// Event listener for the toggle switch
-document.getElementById('automatePromptToggle').addEventListener('change', function() {
-    if (this.checked) {
-        console.log("Automation started");
-        runAutomation();
-    } else {
-        console.log("Automation stopped manually");
-    }
-});
+// Run initialization when the DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}

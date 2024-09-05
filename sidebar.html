@@ -14,22 +14,8 @@
             <input type="file" id="fileInput" accept=".txt" class="file-input">
             <span id="fileName" class="file-name"></span>
         </div>
-          
-          
-          
-        
-        <div class="automate-prompt-toggle">
-            Automate
-            <label class="toggle-switch">
-                <input type="checkbox" id="automatePromptToggle">
-                <span class="slider"></span>
-            </label>
-        </div>
 
-        
-        
-        
-         <!-- Main Prompt Section -->
+        <!-- Main Prompt Section -->
          <div class="form-section">
             <div class="form-container">
                 <textarea class="prompt-textarea" placeholder="Describe your image" rows="3"></textarea>
@@ -44,18 +30,22 @@
                     </div>
                     <button class="image-ref-button">🖼️</button>
                 </div>
+
+                 <!-- Negative Prompt Section -->
+                 <div class="negative-form-section" style="display: none;">
+                    <div class="negative-form-container">
+                        <textarea class="negative-prompt-textarea" placeholder="Describe things to avoid on the image" rows="3"></textarea>
+                    </div>
+                </div>
+
                 <!-- Add the Start Replacing Text button here -->
-                <button id="startButton" class="start-button">Start Replacing Text</button>
+                <button id="startButton" class="start-button" style="display: none;">Start Replacing Text</button>
+                <button id="automateButton" class="start">Start</button>
             </div>
         </div>
         
         
-        <!-- Negative Prompt Section -->
-        <div class="negative-form-section" style="display: none;">
-            <div class="negative-form-container">
-                <textarea class="negative-prompt-textarea" placeholder="Describe things to avoid on the image" rows="3"></textarea>
-            </div>
-        </div>
+       
 
         <div class="select-section">
             <h3>Mode</h3>
@@ -65,7 +55,7 @@
                 </select>
             </div>
         </div>
-
+    
         <div class="select-section">
             <h3>Size</h3>
             <div class="select-container">
@@ -75,64 +65,65 @@
             </div>
         </div>
 
-        <div class="select-section">
-            <h3>Style</h3>
-            <div class="select-container">
-                <select id="style-selector">
-                    <option value="" disabled selected>Select a style</option>
-                </select>
-            </div>
-        </div>
+<!-- Button to toggle advanced options -->
+<button class="collapsible">Advanced Options</button>
 
-        <div class="select-section">
-            <h3>Color</h3>
-            <div class="select-container">
-                <select id="color-selector">
-                    <option value="" disabled selected>Select a Color</option>
-                </select>
-            </div>
-        </div>
+<!-- Collapsible content -->
+<div class="content">
+    
 
-        <div class="select-section">
-            <h3>Camera</h3>
-            <div class="select-container">
-                <select id="camera-selector">
-                    <option value="" disabled selected>Select a Camera</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="select-section">
-            <h3>Lighting</h3>
-            <div class="select-container">
-                <select id="lighting-selector">
-                    <option value="" disabled selected>Select a Lighting</option>
-                </select>
-            </div>
-        </div>
-
-        
-        <div class="select-section">
-            <h3>Structure</h3>
-                <button id="toggle-structure-button">Select Structures</button>
-            <div id="structure-container">
-            <!-- Images will be dynamically added here -->
-            </div>
-        </div>
-
-
-        <div class="select-section">
-            <h3>Number of Images to be Download:</h3>
-            <select id="image-count">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="10">10</option>
-                <option value="20">20</option>
-               
+    <div class="select-section">
+        <h3>Style</h3>
+        <div class="select-container">
+            <select id="style-selector">
+                <option value="" disabled selected>Select a style</option>
             </select>
         </div>
+    </div>
+
+    <div class="select-section">
+        <h3>Color</h3>
+        <div class="select-container">
+            <select id="color-selector">
+                <option value="" disabled selected>Select a color</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="select-section">
+        <h3>Camera</h3>
+        <div class="select-container">
+            <select id="camera-selector">
+                <option value="" disabled selected>Select a camera</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="select-section">
+        <h3>Lighting</h3>
+        <div class="select-container">
+            <select id="lighting-selector">
+                <option value="" disabled selected>Select a lighting</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="select-section">
+        <h3>Structure</h3>
+        <button id="toggle-structure-button">Select Structures</button>
+        <div id="structure-container">
+            <!-- Images will be dynamically added here -->
+        </div>
+    </div>
+
+    <div class="select-section">
+        <h3>Number of Images to be Downloaded</h3>
+        <select id="image-count">
+            <option value="1">1</option>
+            <option value="2">2</option>
+        </select>
+    </div>
+</div>
 
 
         <div class="new-button-container">
@@ -146,17 +137,18 @@
             </button>
         </div>
 
-
-        <!-- <div class="new-button-container">
+<!--
+         <div class="new-button-container">
             <button id="create-button2">Create</button>
         </div>
-     -->
-        <div class="counter">
+-->  
+        <div class="counter" style="display: none;">
             <p>Images to Download: <span id="total-images">1</span></p>
             <p>Current Count: <span id="current-count">0</span></p>
+            <div id="status"></div>
         </div>
     
-        <button class="download-button" id="download-button">Download</button>
+        <button class="download-button" id="download-button" style="display: none;">Download</button>
     </div>
 
     <script src="sidebar.js"></script>
