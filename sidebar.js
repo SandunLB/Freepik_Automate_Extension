@@ -1,30 +1,35 @@
-//-------------------------------------------MAIN PROMPT ACTIONS--------------------------------------------------//
+//-----------------------TEXT PROMPT+TEXT FILE INPUT+EXCLUDE BTN+NEGATIVE PROMPT+AI MODE TOGGLE+REF IMAGE-----------------------//
+// Constants
+const FILE_INPUT_ID = 'fileInput';
+const START_BUTTON_ID = 'startButton';
+const PROMPT_TEXTAREA_CLASS = '.prompt-textarea';
+const AI_PROMPT_TOGGLE_ID = 'aiPromptToggle';
+const EXCLUDE_BUTTON_CLASS = '.exclude-button';
+const NEGATIVE_SECTION_CLASS = '.negative-form-section';
+const NEGATIVE_TEXTAREA_CLASS = '.negative-prompt-textarea';
+const IMAGE_REF_BUTTON_CLASS = '.image-ref-button';
 
-//---------------------------TEXT FILE INPUT + TEXT AREA--------------------------------//
+// Global variables
 let lines = [];
 let currentLine = -1;
 
-const fileInput = document.getElementById('fileInput');
-const startButton = document.getElementById('startButton');
-const extensionTextarea = document.querySelector('.prompt-textarea');
+// DOM Elements
+const fileInput = document.getElementById(FILE_INPUT_ID);
+const startButton = document.getElementById(START_BUTTON_ID);
+const extensionTextarea = document.querySelector(PROMPT_TEXTAREA_CLASS);
+const aiPromptToggle = document.getElementById(AI_PROMPT_TOGGLE_ID);
+const excludeButton = document.querySelector(EXCLUDE_BUTTON_CLASS);
+const negativeSection = document.querySelector(NEGATIVE_SECTION_CLASS);
+const negativeTextarea = document.querySelector(NEGATIVE_TEXTAREA_CLASS);
+const imageRefButton = document.querySelector(IMAGE_REF_BUTTON_CLASS);
 
-fileInput.addEventListener('click', () => {
-    // Reset the file input value when clicked
-    fileInput.value = '';
-});
-
-fileInput.addEventListener('change', handleFileSelect);
-
+// File handling functions
 function handleFileSelect(event) {
     const file = event.target.files[0];
-    
     if (file) {
-        // Reset everything
-        lines = [];
-        currentLine = -1;
-        
+        resetFileState();
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = (e) => {
             lines = e.target.result.split('\n').filter(line => line.trim() !== '');
             console.log(`File loaded with ${lines.length} lines.`);
         };
@@ -32,11 +37,12 @@ function handleFileSelect(event) {
     }
 }
 
-extensionTextarea.addEventListener('input', (event) => {
-    console.log('Text entered in the prompt textarea:', event.target.value);
-    updateMainPageTextarea(event.target.value);
-});
+function resetFileState() {
+    lines = [];
+    currentLine = -1;
+}
 
+// Text area handling functions
 function updateMainPageTextarea(text) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         chrome.scripting.executeScript({
@@ -60,132 +66,64 @@ function handleTextareaInput(currentValue) {
     }
 }
 
-startButton.addEventListener('click', replaceText);
-
 function replaceText() {
     if (lines.length > 0) {
         currentLine++;
         if (currentLine < lines.length) {
             const newText = lines[currentLine].trim();
-            
             if (extensionTextarea) {
                 extensionTextarea.value = newText;
                 extensionTextarea.dispatchEvent(new Event('input', { bubbles: true }));
-                
-                // Update the main webpage's textarea
                 updateMainPageTextarea(newText);
-                
                 console.log(`Displayed line ${currentLine + 1} of ${lines.length}`);
             }
         } else {
-            console.log('End of file reached. Select a file again to start over.');
-            // Reset to allow starting over
-            currentLine = -1;
-            lines = [];
-            fileInput.value = ''; // Clear the file input
-            extensionTextarea.value = ''; // Clear the textarea
-            updateMainPageTextarea(''); // Clear the main webpage's textarea
+            handleEndOfFile();
         }
     } else {
         console.log('No file loaded or all lines displayed. Please select a file.');
     }
 }
 
+function handleEndOfFile() {
+    console.log('End of file reached. Select a file again to start over.');
+    resetFileState();
+    fileInput.value = '';
+    extensionTextarea.value = '';
+    updateMainPageTextarea('');
+}
 
-
-//---------------------------AI PROPMT TOGGLE--------------------------------//
-document.addEventListener('DOMContentLoaded', () => {
-    const aiPromptToggle = document.getElementById('aiPromptToggle');
-    
-    aiPromptToggle.addEventListener('change', (event) => {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.tabs.sendMessage(tabs[0].id, { action: 'toggleAiPrompt' });
-        });
-    });
-
-    // Listen for messages from the content script
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        if (request.action === 'enableAiPromptToggle') {
-            aiPromptToggle.disabled = false;
-            aiPromptToggle.checked = true;
-        } else if (request.action === 'disableAiPromptToggle') {
-            aiPromptToggle.disabled = false;
-            aiPromptToggle.checked = false;
-        }
-    });
-});
-
-
-
-//---------------------------EXCLUDE BUTTON TOGGLE + NEGATIVE PROMPT--------------------------------//
-
-document.addEventListener('DOMContentLoaded', () => {
-    const excludeButton = document.querySelector('.exclude-button');
-    const negativeSection = document.querySelector('.negative-form-section');
-    const negativeTextarea = document.querySelector('.negative-prompt-textarea');
-
-    // Listen for messages from the content script
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        if (request.action === 'showExcludeButton') {
-            excludeButton.style.display = 'inline-block';
-            console.log('Exclude button displayed in sidebar');
-        } else if (request.action === 'hideExcludeButton') {
-            excludeButton.style.display = 'none';
-            console.log('Exclude button hidden in sidebar');
-        } else if (request.action === 'showNegativePrompt') {
-            negativeSection.style.display = 'block';
-            console.log('Negative prompt section shown in sidebar');
-        } else if (request.action === 'hideNegativePrompt') {
-            negativeSection.style.display = 'none';
-            console.log('Negative prompt section hidden in sidebar');
-        }
-    });
-
-    excludeButton.addEventListener('click', () => {
-        console.log('Exclude button clicked in sidebar');
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.tabs.sendMessage(tabs[0].id, { action: 'clickExcludeButton' });
-        });
-    });
-
-    negativeTextarea.addEventListener('input', (event) => {
-        console.log('Text entered in the negative prompt textarea:', event.target.value);
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.tabs.sendMessage(tabs[0].id, { 
-                action: 'updateNegativePrompt', 
-                value: event.target.value 
-            });
-        });
-    });
-});
-
-
-
-//---------------------------IMAGE REF BUTTON TOGGLE--------------------------------//
-document.querySelector('.image-ref-button').addEventListener('click', (event) => {
-    console.log('Image reference button clicked');
-
-    // Send a message to the content script to handle the image reference button functionality
+// AI Prompt Toggle functions
+function handleAiPromptToggle(event) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            func: handleAddImageReferenceClick,
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'toggleAiPrompt' });
+    });
+}
+
+// Exclude Button and Negative Prompt functions
+function handleExcludeButtonClick() {
+    console.log('Exclude button clicked in sidebar');
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'clickExcludeButton' });
+    });
+}
+
+function handleNegativePromptInput(event) {
+    console.log('Text entered in the negative prompt textarea:', event.target.value);
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.sendMessage(tabs[0].id, { 
+            action: 'updateNegativePrompt', 
+            value: event.target.value 
         });
     });
-});
-// Function to handle clicking the "Add image reference" button
-function handleAddImageReferenceClick() {
-    // Step 1: Select the "Add image reference" button using its tooltip
-    const addImageButton = document.querySelector('button[tooltip="Add image reference"]');
+}
 
-    // Step 2: Check if the button is found
+// Image Reference Button function
+function handleAddImageReferenceClick() {
+    const addImageButton = document.querySelector('button[tooltip="Add image reference"]');
     if (addImageButton) {
         console.log('Add Image Reference Button found:', addImageButton);
-
-        // Step 3: Log the current state (disabled or not)
         console.log('Add Image Reference Button Disabled:', addImageButton.disabled);
-
-        // Step 4: Simulate a click on the "Add image reference" button
         addImageButton.click();
         console.log('Add Image Reference Button clicked');
     } else {
@@ -193,13 +131,57 @@ function handleAddImageReferenceClick() {
     }
 }
 
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    fileInput.addEventListener('click', () => fileInput.value = '');
+    fileInput.addEventListener('change', handleFileSelect);
+    extensionTextarea.addEventListener('input', (event) => updateMainPageTextarea(event.target.value));
+    startButton.addEventListener('click', replaceText);
+    aiPromptToggle.addEventListener('change', handleAiPromptToggle);
+    excludeButton.addEventListener('click', handleExcludeButtonClick);
+    negativeTextarea.addEventListener('input', handleNegativePromptInput);
+    imageRefButton.addEventListener('click', () => {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            chrome.scripting.executeScript({
+                target: { tabId: tabs[0].id },
+                func: handleAddImageReferenceClick,
+            });
+        });
+    });
+});
+
+// Message Listener
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    switch (request.action) {
+        case 'enableAiPromptToggle':
+            aiPromptToggle.disabled = false;
+            aiPromptToggle.checked = true;
+            break;
+        case 'disableAiPromptToggle':
+            aiPromptToggle.disabled = false;
+            aiPromptToggle.checked = false;
+            break;
+        case 'showExcludeButton':
+            excludeButton.style.display = 'inline-block';
+            console.log('Exclude button displayed in sidebar');
+            break;
+        case 'hideExcludeButton':
+            excludeButton.style.display = 'none';
+            console.log('Exclude button hidden in sidebar');
+            break;
+        case 'showNegativePrompt':
+            negativeSection.style.display = 'block';
+            console.log('Negative prompt section shown in sidebar');
+            break;
+        case 'hideNegativePrompt':
+            negativeSection.style.display = 'none';
+            console.log('Negative prompt section hidden in sidebar');
+            break;
+    }
+});
 
 
-
-
-//------------------------------------------AI MODE SELECTOR------------------------------------------------//
-
-// popup.js
+//-----------------------AI MODE SELECTOR-----------------------//
 document.addEventListener('DOMContentLoaded', initializePopup);
 
 function initializePopup() {
@@ -212,9 +194,10 @@ function initializePopup() {
 
     function handleModeSelectorClick(event) {
         if (event.button === 0) { // Left mouse button
-            openAIModeContainer()
+            openAIModeContainerWithRetry()
                 .then(() => extractModesFromPage())
-                .then(updateModeSelector);
+                .then(updateModeSelector)
+                .catch(error => console.error('Error in handleModeSelectorClick:', error));
         }
     }
 
@@ -230,8 +213,21 @@ function initializePopup() {
                         console.log('Mode selection failed');
                     }
                 })
-                .catch(console.error);
+                .catch(error => console.error('Error in handleModeSelection:', error));
         }
+    }
+
+    async function openAIModeContainerWithRetry(maxRetries = 3, delay = 500) {
+        for (let i = 0; i < maxRetries; i++) {
+            const success = await openAIModeContainer();
+            if (success) {
+                return true;
+            }
+            console.log(`Attempt ${i + 1} failed. Retrying...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        console.error(`Failed to open AI Mode Container after ${maxRetries} attempts`);
+        return false;
     }
 
     function openAIModeContainer() {
@@ -276,20 +272,14 @@ function initializePopup() {
             const buttons = container.querySelectorAll('button');
             return Array.from(buttons).map((btn, index) => ({
                 index,
-                // Fetching title from either div or span with the 'font-semibold' class
                 title: (btn.querySelector('div[class*="font-semibold"]') || 
                         btn.querySelector('span[class*="font-semibold"]'))?.textContent.trim() || '',
-    
-                // Fetching description
                 description: btn.querySelector('span[class*="text-neutral-700"]')?.textContent.trim() || '',
-    
-                // Checking if the button is selected
                 isSelected: btn.classList.contains('bg-neutral-50') || 
                             btn.classList.contains('dark:bg-neutral-800/50')
             }));
         });
     }
-    
 
     function updateModeSelector(modes) {
         modeSelector.innerHTML = '<option value="" disabled selected>Select a mode</option>';
@@ -340,9 +330,7 @@ function initializePopup() {
         });
     }
 }
-
-//-------------------------------------------SIZE SELECTOR--------------------------------------------------//
-// popup.js for size selector
+//-----------------------SIZE SELECTOR-----------------------//
 document.addEventListener('DOMContentLoaded', initializeSizeSelector);
 
 function initializeSizeSelector() {
@@ -470,54 +458,53 @@ function executeScriptInActiveTab(scriptFunction, ...args) {
 }
 
 
-//-------------------------------------------STYLE SELECTOR--------------------------------------------------//
+//-----------------------STYLE+COLOR+CAMERA+LIGHTING-----------------------//
+// Selector configuration
+const selectors = [
+    { id: 'style-selector', buttonText: 'style' },
+    { id: 'color-selector', buttonText: 'color' },
+    { id: 'camera-selector', buttonText: 'camera' },
+    { id: 'lighting-selector', buttonText: 'lighting' }
+];
 
-// Function to extract styles from the page
-function extractStylesFromPage() {
-    const styleElements = document.querySelectorAll('span.flex.h-7.cursor-pointer.items-center.text-center.text-2xs.capitalize.leading-none.sm\\:text-xs');
-    return Array.from(styleElements).map(el => el.textContent.trim());
+// Generic functions
+function extractOptionsFromPage() {
+    const elements = document.querySelectorAll('span.flex.h-7.cursor-pointer.items-center.text-center.text-2xs.capitalize.leading-none.sm\\:text-xs');
+    return Array.from(elements).map(el => el.textContent.trim());
 }
 
-// Function to update the style selector with real options
-function updateStyleSelector(styles) {
-    const select = document.getElementById('style-selector');
-    
-    // Remove all options
+function updateSelector(selectorId, options) {
+    const select = document.getElementById(selectorId);
     select.innerHTML = '';
 
-    // Add placeholder option
     const placeholderOption = document.createElement('option');
     placeholderOption.value = '';
-    placeholderOption.textContent = 'Select a style';
+    placeholderOption.textContent = `Select a ${selectorId.split('-')[0]}`;
     placeholderOption.disabled = true;
     placeholderOption.selected = true;
     select.appendChild(placeholderOption);
 
-    // Add new options based on extracted styles
-    styles.forEach(style => {
-        const option = document.createElement('option');
-        option.value = style;
-        option.textContent = style;
-        select.appendChild(option);
+    options.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option;
+        optionElement.textContent = option;
+        select.appendChild(optionElement);
     });
 }
 
-// Function to handle style selection
-function handleStyleSelection(event) {
-    const selectedStyle = event.target.value;
-    
-    if (selectedStyle) {
+function handleSelection(event) {
+    const selectedOption = event.target.value;
+    if (selectedOption) {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             chrome.scripting.executeScript({
                 target: { tabId: tabs[0].id },
                 func: clickElementWithText,
-                args: [selectedStyle]
+                args: [selectedOption]
             });
         });
     }
 }
 
-// Function to click the element with the selected text
 function clickElementWithText(searchText) {
     const spans = document.querySelectorAll('span');
     const targetElement = Array.from(spans).find(span => span.textContent.trim() === searchText);
@@ -529,386 +516,66 @@ function clickElementWithText(searchText) {
     }
 }
 
-// Function to toggle the style button
-function toggleStyleButton(action) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            func: (action) => {
-                const styleButton = [...document.querySelectorAll('button')].find(button =>
-                    button.querySelector('span.text-xs.font-semibold.capitalize')?.textContent.trim().toLowerCase() === 'style'
-                );
-                if (styleButton) {
-                    const isActive = styleButton.classList.contains('active');
-                    if ((action === 'open' && !isActive) || (action === 'close' && isActive)) {
-                        styleButton.click();
-                    }
-                }
-                return action === 'open'; 
-            },
-            args: [action]
-        }, (results) => {
-            if (action === 'open' && results && results[0] && results[0].result) {
-                // If the button was successfully opened, now extract the styles
-                chrome.scripting.executeScript({
-                    target: { tabId: tabs[0].id },
-                    func: extractStylesFromPage
-                }, (styleResults) => {
-                    if (styleResults && styleResults[0] && styleResults[0].result) {
-                        updateStyleSelector(styleResults[0].result);
-                    }
-                });
-            }
-        });
-    });
-}
-
-// Initialize the popup
-document.addEventListener('DOMContentLoaded', () => {
-    const styleSelector = document.getElementById('style-selector');
-    
-    // Add event listeners
-    styleSelector.addEventListener('change', handleStyleSelection);
-    styleSelector.addEventListener('focus', () => toggleStyleButton('open'));
-    styleSelector.addEventListener('blur', () => {
-        setTimeout(() => toggleStyleButton('close'), 200);
-    });
-
-    // Initial setup
-    updateStyleSelector([]);
-});
-
-
-//-------------------------------------------COLOR SELECTOR--------------------------------------------------//
-
-
-// Function to extract colors from the page
-function extractcolorsFromPage() {
-    const colorElements = document.querySelectorAll('span.flex.h-7.cursor-pointer.items-center.text-center.text-2xs.capitalize.leading-none.sm\\:text-xs');
-    return Array.from(colorElements).map(el => el.textContent.trim());
-}
-
-// Function to update the color selector with real options
-function updatecolorSelector(colors) {
-    const select = document.getElementById('color-selector');
-    
-    // Remove all options
-    select.innerHTML = '';
-
-    // Add placeholder option
-    const placeholderOption = document.createElement('option');
-    placeholderOption.value = '';
-    placeholderOption.textContent = 'Select a color';
-    placeholderOption.disabled = true;
-    placeholderOption.selected = true;
-    select.appendChild(placeholderOption);
-
-    // Add new options based on extracted colors
-    colors.forEach(color => {
-        const option = document.createElement('option');
-        option.value = color;
-        option.textContent = color;
-        select.appendChild(option);
-    });
-}
-
-// Function to handle color selection
-function handlecolorSelection(event) {
-    const selectedcolor = event.target.value;
-    
-    if (selectedcolor) {
+function toggleButton(buttonText, action) {
+    return new Promise((resolve) => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             chrome.scripting.executeScript({
                 target: { tabId: tabs[0].id },
-                func: clickElementWithText,
-                args: [selectedcolor]
+                func: (buttonText, action) => {
+                    const button = [...document.querySelectorAll('button')].find(button =>
+                        button.querySelector('span.text-xs.font-semibold.capitalize')?.textContent.trim().toLowerCase() === buttonText
+                    );
+                    if (button) {
+                        const isActive = button.classList.contains('active');
+                        if ((action === 'open' && !isActive) || (action === 'close' && isActive)) {
+                            button.click();
+                        }
+                    }
+                    return action === 'open';
+                },
+                args: [buttonText, action]
+            }, (results) => {
+                resolve(results && results[0] && results[0].result);
             });
         });
-    }
+    });
 }
 
-// Function to click the element with the selected text
-function clickElementWithText(searchText) {
-    const spans = document.querySelectorAll('span');
-    const targetElement = Array.from(spans).find(span => span.textContent.trim() === searchText);
-    if (targetElement) {
-        targetElement.click();
-        console.log(`Clicked the element with text: "${searchText}".`);
-    } else {
-        console.log(`Element with text "${searchText}" not found.`);
-    }
-}
+// Initialize selectors
+function initializeSelector(selectorConfig) {
+    const { id, buttonText } = selectorConfig;
+    const selector = document.getElementById(id);
 
-// Function to toggle the color button
-function togglecolorButton(action) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            func: (action) => {
-                const colorButton = [...document.querySelectorAll('button')].find(button =>
-                    button.querySelector('span.text-xs.font-semibold.capitalize')?.textContent.trim().toLowerCase() === 'color'
-                );
-                if (colorButton) {
-                    const isActive = colorButton.classList.contains('active');
-                    if ((action === 'open' && !isActive) || (action === 'close' && isActive)) {
-                        colorButton.click();
-                    }
-                }
-                return action === 'open'; 
-            },
-            args: [action]
-        }, (results) => {
-            if (action === 'open' && results && results[0] && results[0].result) {
-                // If the button was successfully opened, now extract the colors
+    selector.addEventListener('change', handleSelection);
+    selector.addEventListener('focus', async () => {
+        const opened = await toggleButton(buttonText, 'open');
+        if (opened) {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 chrome.scripting.executeScript({
                     target: { tabId: tabs[0].id },
-                    func: extractcolorsFromPage
-                }, (colorResults) => {
-                    if (colorResults && colorResults[0] && colorResults[0].result) {
-                        updatecolorSelector(colorResults[0].result);
+                    func: extractOptionsFromPage
+                }, (results) => {
+                    if (results && results[0] && results[0].result) {
+                        updateSelector(id, results[0].result);
                     }
                 });
-            }
-        });
+            });
+        }
     });
+    selector.addEventListener('blur', () => {
+        setTimeout(() => toggleButton(buttonText, 'close'), 200);
+    });
+
+    updateSelector(id, []);
 }
 
 // Initialize the popup
 document.addEventListener('DOMContentLoaded', () => {
-    const colorSelector = document.getElementById('color-selector');
-    
-    // Add event listeners
-    colorSelector.addEventListener('change', handlecolorSelection);
-    colorSelector.addEventListener('focus', () => togglecolorButton('open'));
-    colorSelector.addEventListener('blur', () => {
-        setTimeout(() => togglecolorButton('close'), 200);
-    });
-
-    // Initial setup
-    updatecolorSelector([]);
+    selectors.forEach(initializeSelector);
 });
 
 
-//-------------------------------------------CAMERA SELECTOR--------------------------------------------------//
-
-
-// Function to extract cameras from the page
-function extractcamerasFromPage() {
-    const cameraElements = document.querySelectorAll('span.flex.h-7.cursor-pointer.items-center.text-center.text-2xs.capitalize.leading-none.sm\\:text-xs');
-    return Array.from(cameraElements).map(el => el.textContent.trim());
-}
-
-// Function to update the camera selector with real options
-function updatecameraSelector(cameras) {
-    const select = document.getElementById('camera-selector');
-    
-    // Remove all options
-    select.innerHTML = '';
-
-    // Add placeholder option
-    const placeholderOption = document.createElement('option');
-    placeholderOption.value = '';
-    placeholderOption.textContent = 'Select a camera';
-    placeholderOption.disabled = true;
-    placeholderOption.selected = true;
-    select.appendChild(placeholderOption);
-
-    // Add new options based on extracted cameras
-    cameras.forEach(camera => {
-        const option = document.createElement('option');
-        option.value = camera;
-        option.textContent = camera;
-        select.appendChild(option);
-    });
-}
-
-// Function to handle camera selection
-function handlecameraSelection(event) {
-    const selectedcamera = event.target.value;
-    
-    if (selectedcamera) {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.scripting.executeScript({
-                target: { tabId: tabs[0].id },
-                func: clickElementWithText,
-                args: [selectedcamera]
-            });
-        });
-    }
-}
-
-// Function to click the element with the selected text
-function clickElementWithText(searchText) {
-    const spans = document.querySelectorAll('span');
-    const targetElement = Array.from(spans).find(span => span.textContent.trim() === searchText);
-    if (targetElement) {
-        targetElement.click();
-        console.log(`Clicked the element with text: "${searchText}".`);
-    } else {
-        console.log(`Element with text "${searchText}" not found.`);
-    }
-}
-
-// Function to toggle the camera button
-function togglecameraButton(action) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            func: (action) => {
-                const cameraButton = [...document.querySelectorAll('button')].find(button =>
-                    button.querySelector('span.text-xs.font-semibold.capitalize')?.textContent.trim().toLowerCase() === 'camera'
-                );
-                if (cameraButton) {
-                    const isActive = cameraButton.classList.contains('active');
-                    if ((action === 'open' && !isActive) || (action === 'close' && isActive)) {
-                        cameraButton.click();
-                    }
-                }
-                return action === 'open'; 
-            },
-            args: [action]
-        }, (results) => {
-            if (action === 'open' && results && results[0] && results[0].result) {
-                // If the button was successfully opened, now extract the cameras
-                chrome.scripting.executeScript({
-                    target: { tabId: tabs[0].id },
-                    func: extractcamerasFromPage
-                }, (cameraResults) => {
-                    if (cameraResults && cameraResults[0] && cameraResults[0].result) {
-                        updatecameraSelector(cameraResults[0].result);
-                    }
-                });
-            }
-        });
-    });
-}
-
-// Initialize the popup
-document.addEventListener('DOMContentLoaded', () => {
-    const cameraSelector = document.getElementById('camera-selector');
-    
-    // Add event listeners
-    cameraSelector.addEventListener('change', handlecameraSelection);
-    cameraSelector.addEventListener('focus', () => togglecameraButton('open'));
-    cameraSelector.addEventListener('blur', () => {
-        setTimeout(() => togglecameraButton('close'), 200);
-    });
-
-    // Initial setup
-    updatecameraSelector([]);
-});
-
-
-//-------------------------------------------LIGHTING SELECTOR--------------------------------------------------//
-
-// Function to extract lightings from the page
-function extractlightingsFromPage() {
-    const lightingElements = document.querySelectorAll('span.flex.h-7.cursor-pointer.items-center.text-center.text-2xs.capitalize.leading-none.sm\\:text-xs');
-    return Array.from(lightingElements).map(el => el.textContent.trim());
-}
-
-// Function to update the lighting selector with real options
-function updatelightingSelector(lightings) {
-    const select = document.getElementById('lighting-selector');
-    
-    // Remove all options
-    select.innerHTML = '';
-
-    // Add placeholder option
-    const placeholderOption = document.createElement('option');
-    placeholderOption.value = '';
-    placeholderOption.textContent = 'Select a lighting';
-    placeholderOption.disabled = true;
-    placeholderOption.selected = true;
-    select.appendChild(placeholderOption);
-
-    // Add new options based on extracted lightings
-    lightings.forEach(lighting => {
-        const option = document.createElement('option');
-        option.value = lighting;
-        option.textContent = lighting;
-        select.appendChild(option);
-    });
-}
-
-// Function to handle lighting selection
-function handlelightingSelection(event) {
-    const selectedlighting = event.target.value;
-    
-    if (selectedlighting) {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.scripting.executeScript({
-                target: { tabId: tabs[0].id },
-                func: clickElementWithText,
-                args: [selectedlighting]
-            });
-        });
-    }
-}
-
-// Function to click the element with the selected text
-function clickElementWithText(searchText) {
-    const spans = document.querySelectorAll('span');
-    const targetElement = Array.from(spans).find(span => span.textContent.trim() === searchText);
-    if (targetElement) {
-        targetElement.click();
-        console.log(`Clicked the element with text: "${searchText}".`);
-    } else {
-        console.log(`Element with text "${searchText}" not found.`);
-    }
-}
-
-// Function to toggle the lighting button
-function togglelightingButton(action) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            func: (action) => {
-                const lightingButton = [...document.querySelectorAll('button')].find(button =>
-                    button.querySelector('span.text-xs.font-semibold.capitalize')?.textContent.trim().toLowerCase() === 'lighting'
-                );
-                if (lightingButton) {
-                    const isActive = lightingButton.classList.contains('active');
-                    if ((action === 'open' && !isActive) || (action === 'close' && isActive)) {
-                        lightingButton.click();
-                    }
-                }
-                return action === 'open'; 
-            },
-            args: [action]
-        }, (results) => {
-            if (action === 'open' && results && results[0] && results[0].result) {
-                // If the button was successfully opened, now extract the lightings
-                chrome.scripting.executeScript({
-                    target: { tabId: tabs[0].id },
-                    func: extractlightingsFromPage
-                }, (lightingResults) => {
-                    if (lightingResults && lightingResults[0] && lightingResults[0].result) {
-                        updatelightingSelector(lightingResults[0].result);
-                    }
-                });
-            }
-        });
-    });
-}
-
-// Initialize the popup
-document.addEventListener('DOMContentLoaded', () => {
-    const lightingSelector = document.getElementById('lighting-selector');
-    
-    // Add event listeners
-    lightingSelector.addEventListener('change', handlelightingSelection);
-    lightingSelector.addEventListener('focus', () => togglelightingButton('open'));
-    lightingSelector.addEventListener('blur', () => {
-        setTimeout(() => togglelightingButton('close'), 200);
-    });
-
-    // Initial setup
-    updatelightingSelector([]);
-});
-
-
-//-------------------------------------------STRUCTURE SELECTOR--------------------------------------------------//
+//-----------------------STRUCUTURE-----------------------//
 
 // Function to extract image sources and indexes from the page
 function extractStructuresFromPage() {
@@ -1012,86 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// CREATE BUTTON + DOWNLOAD BUTTON INDIVIDUAL FUNCTIONALITY
-
-//-------------------------------------------CREATE BUTTON--------------------------------------------------//
-/*
-document.addEventListener('DOMContentLoaded', () => {
-    const createButton = document.getElementById('create-button');
-    
-    createButton.addEventListener('click', () => {
-        console.log('Create button clicked');
-
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.scripting.executeScript({
-                target: { tabId: tabs[0].id },
-                func: clickCreateButton
-            });
-        });
-    });
-});
-
-function clickCreateButton() {
-    const createButton = document.querySelector('button[data-cy="create"]');
-    if (createButton) {
-        const rect = createButton.getBoundingClientRect();
-        const mouseMoveEvent = new MouseEvent('mousemove', {
-            clientX: rect.left + rect.width / 2,
-            clientY: rect.top + rect.height / 2,
-            bubbles: true
-        });
-        const mouseClickEvent = new MouseEvent('click', {
-            clientX: rect.left + rect.width / 2,
-            clientY: rect.top + rect.height / 2,
-            bubbles: true
-        });
-        document.dispatchEvent(mouseMoveEvent);
-        createButton.dispatchEvent(mouseClickEvent);
-        console.log('Create Button clicked on the webpage');
-    } else {
-        console.error('Create Button not found on the webpage');
-    }
-}
-
-
-//-------------------------------------------DOWNLOAD BUTTON--------------------------------------------------//
-
-document.addEventListener('DOMContentLoaded', function() {
-    const imageCountDropdown = document.getElementById('image-count');
-    const totalImagesSpan = document.getElementById('total-images');
-    const currentCountSpan = document.getElementById('current-count');
-    const downloadButton = document.getElementById('download-button');
-  
-    let selectedImageCount = 1; // Default value
-  
-    // Handle dropdown change event
-    imageCountDropdown.addEventListener('change', function() {
-        selectedImageCount = parseInt(this.value);
-        totalImagesSpan.innerText = selectedImageCount;
-        currentCountSpan.innerText = '0'; // Reset current count
-    });
-  
-    // Handle download button click event
-    downloadButton.addEventListener('click', function() {
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            chrome.tabs.sendMessage(tabs[0].id, { 
-                action: 'downloadImages', 
-                count: selectedImageCount 
-            });
-        });
-    });
-  
-    // Listen for updates from content script
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        if (request.action === 'updateCurrentCount') {
-            currentCountSpan.innerText = request.count;
-        }
-    });
-  }); 
-*/
-
-//-------------------------------------------CREATE+DOWNLOAD BUTTON--------------------------------------------------//
-
+//-----------------------CREATE BUTTON + DOWNLOAD BUTTON INDIVIDUAL FUNCTIONALITY-----------------------//
 // Create Button Logic
 const clickCreateButton = () => {
     const createButton = document.querySelector('button[data-cy="create"]');
@@ -1170,39 +758,3 @@ const clickCreateButton = () => {
       }
     });
   });
-
-
-
-
-
-
-//-------------------------------------------LOAD MORE--------------------------------------------//
-document.addEventListener('DOMContentLoaded', () => {
-    const createButton = document.getElementById('create-button2');
-    
-    createButton.addEventListener('click', () => {
-        console.log('Create button clicked');
-  
-        // Query the active tab in the current window
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.scripting.executeScript({
-                target: { tabId: tabs[0].id },
-                func: clickTargetButton
-            });
-        });
-    });
-  });
-  
-  // Function that will be executed on the target webpage
-  function clickTargetButton() {
-    // Use the specific selector you provided
-    const targetButton = document.querySelector('button.my-4.rounded.bg-blue-500.px-6.py-2.text-center.text-sm.font-medium.text-white.hover\\:bg-blue-600');
-    
-    if (targetButton) {
-        targetButton.click();
-        console.log('Target button clicked on the webpage');
-    } else {
-        console.error('Target button not found on the webpage');
-    }
-  }
-  

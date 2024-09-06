@@ -5,7 +5,7 @@ const config = {
     fileInputSelector: '#fileInput',
     automateButtonId: 'automateButton',
     promptDisplayId: 'promptDisplay',
-    animationTimeout: 8000,
+    animationTimeout: 20000,
     iterationDelay: 100,
     uiUpdateDelay: 1000
 };
@@ -60,6 +60,9 @@ const utils = {
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
         return `${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+    },
+    showMessage: (message) => {
+        alert(message);
     }
 };
 
@@ -70,18 +73,22 @@ const core = {
             const createButton = document.querySelector(config.createButtonSelector);
             const buttonText = createButton.querySelector('.button-text');
 
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.type === 'characterData' && buttonText.textContent === 'Create') {
-                        observer.disconnect();
-                        resolve();
-                    }
-                });
-            });
+            const checkButtonState = () => {
+                if (buttonText.textContent === 'Create') {
+                    clearInterval(pollId);
+                    clearTimeout(timeoutId);
+                    observer.disconnect();
+                    resolve();
+                }
+            };
 
+            const observer = new MutationObserver(checkButtonState);
             observer.observe(buttonText, { characterData: true, subtree: true });
 
-            setTimeout(() => {
+            const pollId = setInterval(checkButtonState, config.pollInterval);
+
+            const timeoutId = setTimeout(() => {
+                clearInterval(pollId);
                 observer.disconnect();
                 resolve();
             }, config.animationTimeout);
@@ -163,6 +170,11 @@ const ui = {
 const automation = {
     start: async () => {
         if (!state.isRunning) {
+            if (!elements.fileInput || !elements.fileInput.files[0]) {
+                utils.showMessage("Please select a text file before starting the automation.");
+                return;
+            }
+
             state.isRunning = true;
             state.currentPrompt = 0;
             state.startTime = Date.now() - (state.pausedTime || 0);
