@@ -5,6 +5,7 @@ const config = {
     fileInputSelector: '#fileInput',
     automateButtonId: 'automateButton',
     promptDisplayId: 'promptDisplay',
+    textAreaSelector: 'textarea[placeholder="Describe your image"]',
     animationTimeout: 20000,
     iterationDelay: 100,
     uiUpdateDelay: 1000
@@ -16,14 +17,15 @@ let state = {
     currentPrompt: 0,
     totalPrompts: 0,
     startTime: null,
-    pausedTime: null
+    elapsedTime: 0
 };
 
 // DOM Elements
 const elements = {
     automateButton: null,
     promptDisplay: null,
-    fileInput: null
+    fileInput: null,
+    textArea: null
 };
 
 // Utility Functions
@@ -63,6 +65,16 @@ const utils = {
     },
     showMessage: (message) => {
         alert(message);
+    },
+    clearTextArea: () => {
+        if (elements.textArea) {
+            elements.textArea.value = '';
+            const event = new Event('input', { bubbles: true });
+            elements.textArea.dispatchEvent(event);
+        }
+    },
+    showCompletionMessage: () => {
+        alert("All prompts have been processed!");
     }
 };
 
@@ -123,8 +135,7 @@ const core = {
         }
 
         if (state.currentPrompt >= state.totalPrompts) {
-            console.log("Automation completed: All prompts processed");
-            automation.stop();
+            automation.complete();
             return;
         }
 
@@ -150,10 +161,11 @@ const core = {
 const ui = {
     updateDisplay: () => {
         if (elements.promptDisplay) {
-            const elapsedTime = state.startTime ? (state.pausedTime || Date.now()) - state.startTime : 0;
+            const currentTime = state.isRunning ? Date.now() - state.startTime : 0;
+            const totalElapsedTime = state.elapsedTime + currentTime;
             elements.promptDisplay.innerHTML = `
                 Current Prompt: ${state.currentPrompt} | Total Prompts: ${state.totalPrompts}<br>
-                Elapsed Time: ${utils.formatTime(elapsedTime)}
+                Elapsed Time: ${utils.formatTime(totalElapsedTime)}
             `;
         }
     },
@@ -177,8 +189,8 @@ const automation = {
 
             state.isRunning = true;
             state.currentPrompt = 0;
-            state.startTime = Date.now() - (state.pausedTime || 0);
-            state.pausedTime = null;
+            state.startTime = Date.now();
+            state.elapsedTime = 0;
             try {
                 await core.readFileAndCountPrompts();
                 console.log("Automation started");
@@ -191,10 +203,27 @@ const automation = {
         }
     },
     stop: () => {
+        if (state.isRunning) {
+            state.isRunning = false;
+            state.elapsedTime += Date.now() - state.startTime;
+            console.log("Automation stopped");
+            ui.updateButtonState();
+        }
+    },
+    complete: () => {
         state.isRunning = false;
-        state.pausedTime = Date.now();
-        console.log("Automation stopped");
+        state.elapsedTime += Date.now() - state.startTime;
+        console.log("Automation completed: All prompts processed");
         ui.updateButtonState();
+        ui.updateDisplay();
+        utils.clearTextArea();
+        utils.showCompletionMessage();
+        // Reset elapsed time after completion
+        setTimeout(() => {
+            state.elapsedTime = 0;
+            state.currentPrompt = 0;
+            ui.updateDisplay();
+        }, 1000); // Wait 1 second before resetting to ensure the final time is displayed
     },
     toggle: () => {
         if (state.isRunning) {
@@ -210,6 +239,7 @@ function init() {
     elements.automateButton = document.getElementById(config.automateButtonId);
     elements.promptDisplay = document.getElementById(config.promptDisplayId) || utils.createDisplayElement();
     elements.fileInput = document.querySelector(config.fileInputSelector);
+    elements.textArea = document.querySelector(config.textAreaSelector);
 
     if (elements.automateButton) {
         elements.automateButton.addEventListener('click', automation.toggle);
