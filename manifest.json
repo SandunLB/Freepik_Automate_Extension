@@ -2,15 +2,16 @@
   "manifest_version": 3,
   "name": "Freepik AI Image Automator",
   "version": "1.0",
-  "description": "Streamline your creative process with Freepik AI Image Automator. Seamlessly generate and download AI-generated images on Freepik with just a click. Boost your productivity and creativity by automating repetitive tasks, allowing you to focus on what truly matters—creating stunning visuals.",
+  "description": "Streamline your creative process with Freepik AI Image Automator. Seamlessly generate and download AI-generated images on Freepik with just a click.",
   "permissions": ["activeTab", "scripting", "sidePanel", "tabs"],
   "action": {
-    "default_title": "Open Sidebar",
+    "default_title": "Freepik AI Image Automator",
     "default_icon": {
       "16": "assests/icon16.png",
       "48": "assests/icon48.png",
       "128": "assests/icon128.png"
-    }
+    },
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "background.js"
