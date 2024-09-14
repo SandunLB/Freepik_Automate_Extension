@@ -11,6 +11,8 @@ const config = {
     uiUpdateDelay: 1000
 };
 
+const CHUNK_SIZE = 100; // Process 100 prompts at a time
+
 // State
 let state = {
     isRunning: false,
@@ -19,7 +21,9 @@ let state = {
     startTime: null,
     elapsedTime: 0,
     allPromptsProcessed: false,
-    prompts: [] // Array to store all prompts
+    prompts: [], // Array to store all prompts
+    currentPrompts: [], // Array to store the current chunk of prompts
+    currentChunk: 0
 };
 
 // DOM Elements
@@ -136,8 +140,10 @@ const core = {
                 const content = e.target.result;
                 state.prompts = content.split('\n').filter(line => line.trim() !== '');
                 state.totalPrompts = state.prompts.length;
-                state.currentPrompt = -1; // Reset to -1 when loading new file
+                state.currentPrompt = -1;
+                state.currentChunk = 0;
                 state.allPromptsProcessed = false;
+                core.loadNextChunk();
                 ui.updateDisplay();
                 ui.updateButtonState();
                 resolve(state.totalPrompts);
@@ -145,6 +151,11 @@ const core = {
             reader.onerror = reject;
             reader.readAsText(elements.fileInput.files[0]);
         });
+    },
+    loadNextChunk: () => {
+        const startIndex = state.currentChunk * CHUNK_SIZE;
+        const endIndex = Math.min(startIndex + CHUNK_SIZE, state.totalPrompts);
+        state.currentPrompts = state.prompts.slice(startIndex, endIndex);
     },
     runAutomation: async () => {
         if (!state.isRunning) return;
@@ -162,8 +173,15 @@ const core = {
             return;
         }
 
+        // Load next chunk if necessary
+        if (state.currentPrompt % CHUNK_SIZE === 0) {
+            state.currentChunk = Math.floor(state.currentPrompt / CHUNK_SIZE);
+            core.loadNextChunk();
+        }
+
         // Set the current prompt in the text area
-        utils.setTextArea(state.prompts[state.currentPrompt]);
+        const chunkIndex = state.currentPrompt % CHUNK_SIZE;
+        utils.setTextArea(state.currentPrompts[chunkIndex]);
 
         ui.updateDisplay();
 
@@ -258,6 +276,8 @@ const automation = {
         setTimeout(() => {
             state.elapsedTime = 0;
             state.currentPrompt = -1;
+            state.currentChunk = 0;
+            state.currentPrompts = [];
             ui.updateDisplay();
         }, 1000);
     },
@@ -285,8 +305,10 @@ function init() {
     if (elements.fileInput) {
         elements.fileInput.addEventListener('change', () => {
             state.prompts = [];
+            state.currentPrompts = [];
             state.allPromptsProcessed = false;
             state.currentPrompt = -1;
+            state.currentChunk = 0;
             ui.updateButtonState();
             ui.updateDisplay();
         });
