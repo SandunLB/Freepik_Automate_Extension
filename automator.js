@@ -17,7 +17,8 @@ let state = {
     currentPrompt: 0,
     totalPrompts: 0,
     startTime: null,
-    elapsedTime: 0
+    elapsedTime: 0,
+    allPromptsProcessed: false
 };
 
 // DOM Elements
@@ -25,7 +26,8 @@ const elements = {
     automateButton: null,
     promptDisplay: null,
     fileInput: null,
-    textArea: null
+    textArea: null,
+    createButton: null
 };
 
 // Utility Functions
@@ -75,6 +77,18 @@ const utils = {
     },
     showCompletionMessage: () => {
         alert("All prompts have been processed!");
+    },
+    disableButton: (button) => {
+        if (button) {
+            button.disabled = true;
+            button.classList.add('disabled');
+        }
+    },
+    enableButton: (button) => {
+        if (button) {
+            button.disabled = false;
+            button.classList.remove('disabled');
+        }
     }
 };
 
@@ -97,7 +111,7 @@ const core = {
             const observer = new MutationObserver(checkButtonState);
             observer.observe(buttonText, { characterData: true, subtree: true });
 
-            const pollId = setInterval(checkButtonState, config.pollInterval);
+            const pollId = setInterval(checkButtonState, 100);
 
             const timeoutId = setTimeout(() => {
                 clearInterval(pollId);
@@ -118,7 +132,9 @@ const core = {
                 const content = e.target.result;
                 const lines = content.split('\n').filter(line => line.trim() !== '');
                 state.totalPrompts = lines.length;
+                state.allPromptsProcessed = false;  // Reset when new file is loaded
                 ui.updateDisplay();
+                ui.updateButtonState();  // Update button state when new file is loaded
                 resolve(state.totalPrompts);
             };
             reader.onerror = reject;
@@ -174,6 +190,16 @@ const ui = {
             elements.automateButton.textContent = state.isRunning ? 'Stop' : 'Start';
             elements.automateButton.classList.toggle('stop', state.isRunning);
             elements.automateButton.classList.toggle('start', !state.isRunning);
+
+            // Disable the button if all prompts have been processed
+            if (state.allPromptsProcessed) {
+                utils.disableButton(elements.automateButton);
+            } else {
+                utils.enableButton(elements.automateButton);
+            }
+        }
+        if (elements.createButton) {
+            elements.createButton.style.display = state.isRunning ? 'inline-block' : 'none';
         }
     }
 };
@@ -181,7 +207,7 @@ const ui = {
 // Automation Control
 const automation = {
     start: async () => {
-        if (!state.isRunning) {
+        if (!state.isRunning && !state.allPromptsProcessed) {
             if (!elements.fileInput || !elements.fileInput.files[0]) {
                 utils.showMessage("Please select a text file before starting the automation.");
                 return;
@@ -212,6 +238,7 @@ const automation = {
     },
     complete: () => {
         state.isRunning = false;
+        state.allPromptsProcessed = true;  // Set this flag when all prompts are processed
         state.elapsedTime += Date.now() - state.startTime;
         console.log("Automation completed: All prompts processed");
         ui.updateButtonState();
@@ -240,9 +267,17 @@ function init() {
     elements.promptDisplay = document.getElementById(config.promptDisplayId) || utils.createDisplayElement();
     elements.fileInput = document.querySelector(config.fileInputSelector);
     elements.textArea = document.querySelector(config.textAreaSelector);
+    elements.createButton = document.querySelector(config.createButtonSelector);
 
     if (elements.automateButton) {
         elements.automateButton.addEventListener('click', automation.toggle);
+    }
+
+    if (elements.fileInput) {
+        elements.fileInput.addEventListener('change', () => {
+            state.allPromptsProcessed = false;  // Reset when a new file is selected
+            ui.updateButtonState();
+        });
     }
 
     ui.updateButtonState();
