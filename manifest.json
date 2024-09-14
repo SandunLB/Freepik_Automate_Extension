@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Freepik AI Image Automator",
+  "name": "Pikbot : bulk ai image genaration tool for freepik pikaso",
   "version": "1.0",
-  "description": "Streamline your creative process with Freepik AI Image Automator. Seamlessly generate and download AI-generated images on Freepik with just a click.",
+  "description": "Pikbot is a bulk image generation tool for freepik pikaso. It helps you to generate multiple images at once.",
   "permissions": ["activeTab", "scripting", "sidePanel", "tabs"],
   "action": {
     "default_title": "Freepik AI Image Automator",
