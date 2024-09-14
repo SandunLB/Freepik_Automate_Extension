@@ -14,11 +14,12 @@ const config = {
 // State
 let state = {
     isRunning: false,
-    currentPrompt: 0,
+    currentPrompt: -1,  // Start at -1 so the first prompt is 0
     totalPrompts: 0,
     startTime: null,
     elapsedTime: 0,
-    allPromptsProcessed: false
+    allPromptsProcessed: false,
+    prompts: [] // Array to store all prompts
 };
 
 // DOM Elements
@@ -68,12 +69,15 @@ const utils = {
     showMessage: (message) => {
         alert(message);
     },
-    clearTextArea: () => {
+    setTextArea: (text) => {
         if (elements.textArea) {
-            elements.textArea.value = '';
+            elements.textArea.value = text;
             const event = new Event('input', { bubbles: true });
             elements.textArea.dispatchEvent(event);
         }
+    },
+    clearTextArea: () => {
+        utils.setTextArea('');
     },
     showCompletionMessage: () => {
         alert("All prompts have been processed!");
@@ -120,7 +124,7 @@ const core = {
             }, config.animationTimeout);
         });
     },
-    readFileAndCountPrompts: () => {
+    readFileAndLoadPrompts: () => {
         return new Promise((resolve, reject) => {
             if (!elements.fileInput || !elements.fileInput.files[0]) {
                 reject(new Error('No file selected'));
@@ -130,11 +134,12 @@ const core = {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const content = e.target.result;
-                const lines = content.split('\n').filter(line => line.trim() !== '');
-                state.totalPrompts = lines.length;
-                state.allPromptsProcessed = false;  // Reset when new file is loaded
+                state.prompts = content.split('\n').filter(line => line.trim() !== '');
+                state.totalPrompts = state.prompts.length;
+                state.currentPrompt = -1; // Reset to -1 when loading new file
+                state.allPromptsProcessed = false;
                 ui.updateDisplay();
-                ui.updateButtonState();  // Update button state when new file is loaded
+                ui.updateButtonState();
                 resolve(state.totalPrompts);
             };
             reader.onerror = reject;
@@ -150,12 +155,16 @@ const core = {
             return;
         }
 
+        state.currentPrompt++;
+
         if (state.currentPrompt >= state.totalPrompts) {
             automation.complete();
             return;
         }
 
-        state.currentPrompt++;
+        // Set the current prompt in the text area
+        utils.setTextArea(state.prompts[state.currentPrompt]);
+
         ui.updateDisplay();
 
         try {
@@ -179,8 +188,9 @@ const ui = {
         if (elements.promptDisplay) {
             const currentTime = state.isRunning ? Date.now() - state.startTime : 0;
             const totalElapsedTime = state.elapsedTime + currentTime;
+            const displayedPrompt = state.currentPrompt + 1;
             elements.promptDisplay.innerHTML = `
-                Current Prompt: ${state.currentPrompt} | Total Prompts: ${state.totalPrompts}<br>
+                Current Prompt: ${displayedPrompt} | Total Prompts: ${state.totalPrompts}<br>
                 Elapsed Time: ${utils.formatTime(totalElapsedTime)}
             `;
         }
@@ -191,7 +201,6 @@ const ui = {
             elements.automateButton.classList.toggle('stop', state.isRunning);
             elements.automateButton.classList.toggle('start', !state.isRunning);
 
-            // Disable the button if all prompts have been processed
             if (state.allPromptsProcessed) {
                 utils.disableButton(elements.automateButton);
             } else {
@@ -213,19 +222,20 @@ const automation = {
                 return;
             }
 
-            state.isRunning = true;
-            state.currentPrompt = 0;
-            state.startTime = Date.now();
-            state.elapsedTime = 0;
-            try {
-                await core.readFileAndCountPrompts();
-                console.log("Automation started");
-                ui.updateButtonState();
-                core.runAutomation();
-            } catch (error) {
-                console.error("Failed to start automation:", error);
-                automation.stop();
+            if (state.prompts.length === 0) {
+                try {
+                    await core.readFileAndLoadPrompts();
+                } catch (error) {
+                    console.error("Failed to load prompts:", error);
+                    return;
+                }
             }
+
+            state.isRunning = true;
+            state.startTime = Date.now();
+            console.log("Automation started");
+            ui.updateButtonState();
+            core.runAutomation();
         }
     },
     stop: () => {
@@ -238,19 +248,18 @@ const automation = {
     },
     complete: () => {
         state.isRunning = false;
-        state.allPromptsProcessed = true;  // Set this flag when all prompts are processed
+        state.allPromptsProcessed = true;
         state.elapsedTime += Date.now() - state.startTime;
         console.log("Automation completed: All prompts processed");
         ui.updateButtonState();
         ui.updateDisplay();
         utils.clearTextArea();
         utils.showCompletionMessage();
-        // Reset elapsed time after completion
         setTimeout(() => {
             state.elapsedTime = 0;
-            state.currentPrompt = 0;
+            state.currentPrompt = -1;
             ui.updateDisplay();
-        }, 1000); // Wait 1 second before resetting to ensure the final time is displayed
+        }, 1000);
     },
     toggle: () => {
         if (state.isRunning) {
@@ -275,15 +284,17 @@ function init() {
 
     if (elements.fileInput) {
         elements.fileInput.addEventListener('change', () => {
-            state.allPromptsProcessed = false;  // Reset when a new file is selected
+            state.prompts = [];
+            state.allPromptsProcessed = false;
+            state.currentPrompt = -1;
             ui.updateButtonState();
+            ui.updateDisplay();
         });
     }
 
     ui.updateButtonState();
     ui.updateDisplay();
 
-    // Start updating the display every second
     setInterval(ui.updateDisplay, 1000);
 }
 
