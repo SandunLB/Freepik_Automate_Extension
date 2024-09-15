@@ -147,6 +147,12 @@ const core = {
                 core.loadNextChunk();
                 ui.updateDisplay();
                 ui.updateButtonState();
+
+                // Send message to clear CSV data
+                chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+                    chrome.tabs.sendMessage(tabs[0].id, {action: 'clearCSVData'});
+                });
+
                 resolve(state.totalPrompts);
             };
             reader.onerror = reject;

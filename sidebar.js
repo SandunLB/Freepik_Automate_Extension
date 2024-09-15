@@ -679,6 +679,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+
+//-----------------------CSV DOWNLOAD BUTTON-----------------------//
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadCSVButton = document.getElementById('downloadCSV');
+
+    downloadCSVButton.addEventListener('click', function() {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            chrome.tabs.sendMessage(tabs[0].id, {action: 'downloadCSV'});
+        });
+    });
+});
+
+
 //-----------------------CREATE BUTTON + DOWNLOAD BUTTON INDIVIDUAL FUNCTIONALITY-----------------------//
 // Create Button Logic
 const clickCreateButton = () => {

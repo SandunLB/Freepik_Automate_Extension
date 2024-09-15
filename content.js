@@ -1,5 +1,3 @@
-// content.js
-
 // Constants
 const SELECTORS = {
   EXCLUDE_BUTTON: 'button',
@@ -18,8 +16,9 @@ const MESSAGES = {
   DISABLE_AI_PROMPT: { action: 'disableAiPromptToggle' }
 };
 
-// Global variable to store the current prompt name
+// Global variables
 let currentPromptName = '';
+let csvData = [];
 
 // Main function
 (function() {
@@ -118,6 +117,12 @@ function setupMessageListeners() {
       case 'updateCurrentPrompt':
         handleUpdateCurrentPrompt(request.promptName);
         break;
+      case 'downloadCSV':
+        downloadCSV();
+        break;
+      case 'clearCSVData':
+        clearCSVData();
+        break;
     }
   });
 }
@@ -168,6 +173,33 @@ function handleToggleAiPrompt() {
 function handleUpdateCurrentPrompt(promptName) {
   currentPromptName = promptName;
   console.log('Current prompt updated:', currentPromptName);
+}
+
+// CSV functionality
+function addToCSV( imageName,promptName) {
+  csvData.push([imageName,promptName]);
+}
+
+function downloadCSV() {
+  let csvContent = "data:text/csv;charset=utf-8,";
+  csvContent += "filename,prompt,url\n";
+  csvData.forEach(function(rowArray) {
+    let row = rowArray.join(",");
+    csvContent += row + "\n";
+  });
+  
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "image_data.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function clearCSVData() {
+  csvData = [];
+  console.log('CSV data cleared');
 }
 
 // Image download functionality
@@ -251,12 +283,17 @@ function downloadImage(blobUrl, index) {
         const sanitizedWords = firstFiveWords.replace(/[^a-z0-9_]/gi, '').toLowerCase();
         
         // Combine the sanitized words with the index for the filename
-        a.download = `${sanitizedWords}-${index}.png`;
+        const imageName = `${sanitizedWords}-${index}.png`;
+        a.download = imageName;
         
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+
+        // Add to CSV data with full prompt name
+        addToCSV(imageName,currentPromptName);
+
         resolve();
       })
       .catch(reject);
