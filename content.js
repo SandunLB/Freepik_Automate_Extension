@@ -176,15 +176,18 @@ function handleUpdateCurrentPrompt(promptName) {
 }
 
 // CSV functionality
-function addToCSV( imageName,promptName) {
-  csvData.push([imageName,promptName]);
+function addToCSV(imageName, promptName) {
+  csvData.push([imageName, promptName]);
 }
 
 function downloadCSV() {
   let csvContent = "data:text/csv;charset=utf-8,";
   csvContent += "filename,prompt,url\n";
   csvData.forEach(function(rowArray) {
-    let row = rowArray.join(",");
+    let [imageName, promptName] = rowArray;
+    // Remove any newline characters from the prompt
+    promptName = promptName.replace(/\r?\n|\r/g, " ").trim();
+    let row = `${imageName},"${promptName}",`;
     csvContent += row + "\n";
   });
   
@@ -267,7 +270,7 @@ function findScrollableParent(element) {
   }
 }
 
-function downloadImage(blobUrl, index) {
+async function downloadImage(blobUrl, index) {
   return new Promise((resolve, reject) => {
     fetch(blobUrl)
       .then(response => response.blob())
@@ -292,7 +295,7 @@ function downloadImage(blobUrl, index) {
         URL.revokeObjectURL(url);
 
         // Add to CSV data with full prompt name
-        addToCSV(imageName,currentPromptName);
+        addToCSV(imageName, currentPromptName);
 
         resolve();
       })
