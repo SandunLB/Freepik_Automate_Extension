@@ -567,5 +567,29 @@ select:focus {
 
 
 
+.csv-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
+#downloadCSV {
+  background-color: #6ceb2f;
+  color: rgb(0, 0, 0);
+  width: 100%;
+  padding: 10px;
+  margin-top: 12px;
+  font-size: 12px;
+  border: none; 
+  border-radius: 8px; 
+  cursor: pointer; 
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
 
+#downloadCSV:hover {
+  background-color: #70da40; 
+  box-shadow: 0 5px 8px rgba(0, 0, 0, 0.2); 
+}
