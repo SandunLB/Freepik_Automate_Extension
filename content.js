@@ -18,6 +18,9 @@ const MESSAGES = {
   DISABLE_AI_PROMPT: { action: 'disableAiPromptToggle' }
 };
 
+// Global variable to store the current prompt name
+let currentPromptName = '';
+
 // Main function
 (function() {
   setupObservers();
@@ -112,6 +115,9 @@ function setupMessageListeners() {
       case 'downloadImages':
         downloadImagesWithIncrementalScroll(request.count);
         break;
+      case 'updateCurrentPrompt':
+        handleUpdateCurrentPrompt(request.promptName);
+        break;
     }
   });
 }
@@ -157,6 +163,11 @@ function handleToggleAiPrompt() {
   } else {
     console.error('AI-prompt toggle container not found');
   }
+}
+
+function handleUpdateCurrentPrompt(promptName) {
+  currentPromptName = promptName;
+  console.log('Current prompt updated:', currentPromptName);
 }
 
 // Image download functionality
@@ -232,7 +243,16 @@ function downloadImage(blobUrl, index) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `downloaded-image-${index}.png`;
+        
+        // Get the first 5 words of the current prompt
+        const firstFiveWords = currentPromptName.split(' ').slice(0, 5).join('_');
+        
+        // Create a sanitized version of the first five words
+        const sanitizedWords = firstFiveWords.replace(/[^a-z0-9_]/gi, '').toLowerCase();
+        
+        // Combine the sanitized words with the index for the filename
+        a.download = `${sanitizedWords}-${index}.png`;
+        
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

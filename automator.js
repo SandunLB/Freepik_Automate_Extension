@@ -23,7 +23,8 @@ let state = {
     allPromptsProcessed: false,
     prompts: [], // Array to store all prompts
     currentPrompts: [], // Array to store the current chunk of prompts
-    currentChunk: 0
+    currentChunk: 0,
+    currentPromptName: '' // New property to store the current prompt name
 };
 
 // DOM Elements
@@ -181,7 +182,16 @@ const core = {
 
         // Set the current prompt in the text area
         const chunkIndex = state.currentPrompt % CHUNK_SIZE;
-        utils.setTextArea(state.currentPrompts[chunkIndex]);
+        state.currentPromptName = state.currentPrompts[chunkIndex];
+        utils.setTextArea(state.currentPromptName);
+
+        // Send the current prompt name to content.js
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+                action: 'updateCurrentPrompt',
+                promptName: state.currentPromptName
+            });
+        });
 
         ui.updateDisplay();
 
