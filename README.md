@@ -9,7 +9,7 @@ This Chrome extension supercharges your experience with the Freepik AI Image Gen
 - 💾 Downloads the images to your local system
 - 📊 NEW: Downloads image metadata as CSV file
 - 🧩 Easy to use interface integrated with the Freepik website
-- ⚛️ Built using React for a sleek extension interface
+- 🔧 Built using vanilla JavaScript for optimal performance
 
 ## 🛠️ Installation
 
@@ -35,7 +35,7 @@ This Chrome extension supercharges your experience with the Freepik AI Image Gen
 
 - **JavaScript**: Core logic for automating image generation and download
 - **HTML/CSS**: Structure and styling of the extension interface
-- **React**: Building the interactive extension UI
+- **Chrome Extension API**: For seamless integration with the browser
 
 ## 🤝 Contributing
 
