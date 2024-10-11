@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Test Sidebar Extension</title>
     <link rel="stylesheet" href="css/styles.css" />
+    <style>
+              button {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            margin: 5px 0;
+            padding: 5px;
+            text-align: left;
+        }
+        button img {
+            width: 20px;
+            height: 20px;
+            margin-left: 5px;
+            object-fit: cover;
+            border-radius: 2px;
+        }
+    </style>
   </head>
   <body>
     <div class="sidebar-wrapper">
@@ -56,67 +73,13 @@
         </div>
       </div>
 
-      <div class="select-section">
-        <h3>Mode</h3>
-        <div class="select-container">
-          <select id="mode-selector">
-            <option value="" disabled selected>Select a mode</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="select-section">
-        <h3>Size</h3>
-        <div class="select-container">
-          <select id="size-selector">
-            <option value="" disabled selected>Select a size</option>
-          </select>
-        </div>
-      </div>
-
-      <button class="collapsible">Advanced Options</button>
-      <div class="content">
-        <div class="select-section">
-          <h3>Style</h3>
-          <div class="select-container">
-            <select id="style-selector">
-              <option value="" disabled selected>Select a style</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="select-section">
-          <h3>Color</h3>
-          <div class="select-container">
-            <select id="color-selector">
-              <option value="" disabled selected>Select a color</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="select-section">
-          <h3>Camera</h3>
-          <div class="select-container">
-            <select id="camera-selector">
-              <option value="" disabled selected>Select a camera</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="select-section">
-          <h3>Lighting</h3>
-          <div class="select-container">
-            <select id="lighting-selector">
-              <option value="" disabled selected>Select a lighting</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="select-section">
-          <h3>Structure</h3>
-          <button id="toggle-structure-button">Select Structures</button>
-          <div id="structure-container"></div>
-        </div>
+      <button id="modeBtn">Mode: Loading...</button>
+      <button id="sizeBtn">Size: Loading...</button>
+      <button id="styleBtn">Style: Loading...</button>
+      <button id="colorBtn">Color: Loading...</button>
+      <button id="lightingBtn">Lighting: Loading...</button>
+      <button id="cameraBtn">Camera: Loading...</button>
+      <button id="structureBtn">Structure: Loading...</button>
 
         <div class="select-section">
           <h3>Number of Images to be Downloaded</h3>
