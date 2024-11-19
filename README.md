@@ -1,4 +1,4 @@
-# 🎨 Freepik AI Image Generator Automation Extension
+# 🎨 Freepik AI Image Generator Automation Extension ;)
 
 This Chrome extension supercharges your experience with the Freepik AI Image Generator website! It automates the process of generating and downloading images, making your creative workflow smoother than ever. 🚀
 
